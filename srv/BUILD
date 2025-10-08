@@ -10,8 +10,8 @@ cc_binary(
     name = "server",
     srcs = glob(["*.cc"]),
     deps = [
-        "//:cc_proto",
-        "//:grpc",
+        "//:helloworld_cc_proto",
+        "//:helloworld_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_protobuf//:protobuf",
     ],
