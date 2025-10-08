@@ -1,72 +1,127 @@
 # HelloWorldGrpc
 
-## Build and Run with Make
+A simple gRPC Hello World example in C++ using Bazel build system with generalized file discovery.
 
-Prerequisites:
-- g++ (C++17)
-- CMake >= 3.16
-- Protobuf (`protoc`, `libprotobuf-dev`)
-- gRPC C++ development libraries (e.g., `libgrpc++-dev`, `grpc_cpp_plugin`)
+## Features
 
-### Build
+- **Generalized Build Configuration**: Uses Bazel `glob()` patterns to automatically discover source files
+- **Automatic File Discovery**: Add new `.proto`, `.cc` files and they're automatically included in the build
+- **Modern Bazel Setup**: Uses Bzlmod (MODULE.bazel) for dependency management
+- **Clean Project Structure**: Organized with separate directories for protocol definitions, server, and client code
 
-```bash
-make build
+## Project Structure
+
+```
+HelloWorldGrpc/
+├── BUILD                 # Bazel build configuration with glob patterns
+├── MODULE.bazel         # Bzlmod module definition
+├── proto/               # Protocol buffer definitions
+│   └── helloworld.proto
+├── srv/                 # Server source code
+│   └── server.cc
+├── cli/                 # Client source code
+│   └── client.cc
+└── README.md
 ```
 
-Artifacts are placed under `build/`:
-- `build/hello_server`
-- `build/hello_client`
+## Prerequisites
 
-### Run
+- **Bazel**: Install Bazel (version 6.0+ recommended)
+- **Protocol Buffers**: `protoc` compiler and development libraries
+- **gRPC**: gRPC C++ development libraries and plugins
 
-Start the server (runs in background and logs to `build/hello_server.log`):
+### Ubuntu/Debian Installation
 
 ```bash
-make run-server
+# Install Bazel
+curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+sudo apt update && sudo apt install bazel
+
+# Install protobuf and gRPC
+sudo apt install protobuf-compiler libprotobuf-dev libgrpc++-dev protobuf-compiler-grpc
 ```
 
-Run the client:
+## Build
+
+The build system automatically discovers files using glob patterns:
 
 ```bash
-make run-client
+# Build all targets
+bazel build //...
+
+# Build specific targets
+bazel build //:hello_server
+bazel build //:hello_client
 ```
 
-Stop the server:
+### Generated Files
+
+Bazel will automatically generate the necessary protobuf and gRPC files:
+- Protocol buffer C++ files (`*.pb.cc`, `*.pb.h`)
+- gRPC C++ files (`*.grpc.pb.cc`, `*.grpc.pb.h`)
+
+## Run
+
+### Start the Server
 
 ```bash
-make stop-server
-```
+# Run server in foreground
+bazel run //:hello_server
 
-### Clean
-
-Remove the entire CMake build directory:
-
-```bash
-make clean
-```
-
-## Build and Run with Bazel
-
-Prerequisites:
-- Bazel installed (`bazel` on PATH)
-- System `protoc`, `grpc_cpp_plugin`, and gRPC/protobuf dev libs available to linker
-
-This repo includes a minimal, non-hermetic Bazel setup that shells out to system `protoc` and `grpc_cpp_plugin`.
-
-### Build
-
-```bash
-bazel build //:hello_server //:hello_client
-```
-
-### Run
-
-```bash
+# Or run the binary directly
 ./bazel-bin/hello_server
+```
+
+### Run the Client
+
+```bash
+# Run client
+bazel run //:hello_client
+
+# Or run the binary directly
 ./bazel-bin/hello_client
 ```
 
-Notes:
-- If the link step fails, ensure `libgrpc++`/`libgrpc`/`libprotobuf` are installed (e.g., `sudo apt install libgrpc++-dev protobuf-compiler-grpc`).
-- For fully hermetic builds, consider switching to `rules_proto` + `rules_proto_grpc` in `WORKSPACE` and `BUILD`.
+## Development
+
+### Adding New Files
+
+The build system uses glob patterns, so you can easily add new files:
+
+- **New Protocol Files**: Add `.proto` files to `proto/` directory
+- **New Server Files**: Add `.cc` files to `srv/` directory  
+- **New Client Files**: Add `.cc` files to `cli/` directory
+
+The build system will automatically discover and include them.
+
+### Clean Build
+
+```bash
+# Clean all build artifacts
+bazel clean
+
+# Clean and rebuild
+bazel clean && bazel build //...
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Missing Dependencies**: Ensure all prerequisites are installed
+2. **Version Compatibility**: Make sure protobuf and gRPC versions are compatible
+3. **Build Cache**: Use `bazel clean` if you encounter build issues
+
+### Build Configuration
+
+The `BUILD` file uses the following glob patterns:
+- `glob(["proto/*.proto"])` - Discovers all protocol buffer files
+- `glob(["srv/*.cc"])` - Discovers all server source files
+- `glob(["cli/*.cc"])` - Discovers all client source files
+- `glob(["proto/*.grpc.pb.cc"], allow_empty = True)` - Discovers generated gRPC files
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
