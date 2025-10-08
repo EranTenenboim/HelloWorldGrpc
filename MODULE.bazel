@@ -1,4 +1,23 @@
 module(
-    name = "helloworldgrpc",
+    name = "grpc_project",
     version = "1.0.0",
 )
+
+# External dependencies
+bazel_dep(name = "rules_proto", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.0.9")
+bazel_dep(name = "bazel_skylib", version = "1.4.2")
+
+# Protocol Buffers
+bazel_dep(name = "com_google_protobuf", version = "21.12")
+bazel_dep(name = "rules_proto_grpc", version = "4.1.1")
+
+# gRPC dependencies
+bazel_dep(name = "com_github_grpc_grpc", version = "1.50.1")
+bazel_dep(name = "upb", version = "0.0.0-20221230-1.1.0")
+bazel_dep(name = "re2", version = "2022-12-01")
+bazel_dep(name = "abseil-cpp", version = "20220623.1")
+
+# Additional dependencies
+bazel_dep(name = "zlib", version = "1.2.13")
+bazel_dep(name = "c-ares", version = "1.19.1")

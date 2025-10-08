@@ -1,60 +1,48 @@
+# Master BUILD file template for gRPC projects
+# This file should be customized by each project to define its own structure
+# 
+# Example usage:
+# 1. Copy this file to your project
+# 2. Define your proto files location
+# 3. Define your server/client source locations
+# 4. Customize target names as needed
+
+load("@rules_proto_grpc//cpp:defs.bzl", "cpp_grpc_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
-# Protocol buffer definition
+# TODO: Replace with your actual proto file paths
+# Example: srcs = glob(["proto/*.proto"]) or srcs = ["my_service.proto"]
 proto_library(
-    name = "helloworld_proto",
-    srcs = glob(["proto/*.proto"]),
+    name = "proto",
+    srcs = [],  # <-- Define your proto files here
+    deps = [
+        "@com_google_protobuf//:any_proto",
+        "@com_google_protobuf//:timestamp_proto",
+        "@com_google_protobuf//:empty_proto",
+    ],
 )
 
-# Protocol buffer C++ library
+# TODO: Add any additional proto dependencies
+# Example: deps = ["@com_google_protobuf//:any_proto"]
 cc_proto_library(
-    name = "helloworld_cc_proto",
-    deps = [":helloworld_proto"],
+    name = "cc_proto",
+    deps = [":proto"],
 )
 
-# gRPC C++ library - we'll generate this manually for now
-cc_library(
-    name = "helloworld_grpc",
-    srcs = glob(["proto/*.grpc.pb.cc"], allow_empty = True),
-    hdrs = glob(["proto/*.grpc.pb.h"], allow_empty = True),
-    includes = ["proto"],
-    deps = [":helloworld_cc_proto"],
+# TODO: Define your gRPC generated files location
+# Example: Use cpp_grpc_library for automatic generation
+cpp_grpc_library(
+    name = "grpc",
+    protos = [":proto"],
+    deps = [":cc_proto"],
 )
 
-# Server binary with gRPC
-cc_binary(
-    name = "hello_server",
-    srcs = glob(["srv/*.cc"]),
-    deps = [
-        ":helloworld_cc_proto",
-        ":helloworld_grpc",
-    ],
-    copts = [
-        "-std=c++17",
-    ],
-    linkopts = [
-        "-lgrpc++",
-        "-lgrpc",
-        "-lprotobuf",
-        "-lpthread",
-    ],
-)
-
-# Client binary with gRPC
-cc_binary(
-    name = "hello_client",
-    srcs = glob(["cli/*.cc"]),
-    deps = [
-        ":helloworld_cc_proto",
-        ":helloworld_grpc",
-    ],
-    copts = [
-        "-std=c++17",
-    ],
-    linkopts = [
-        "-lgrpc++",
-        "-lgrpc",
-        "-lprotobuf",
-        "-lpthread",
-    ],
-)
+# TODO: Create BUILD files in your server and client directories
+# Example: Create srv/BUILD and cli/BUILD files with cc_binary targets
+# The binaries should depend on the proto libraries defined above:
+#   deps = [":cc_proto", ":grpc"]
+#
+# See BUILD.example for a complete example of how to structure this.

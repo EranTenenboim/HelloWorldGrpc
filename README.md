@@ -27,21 +27,56 @@ HelloWorldGrpc/
 ## Prerequisites
 
 - **Bazel**: Install Bazel (version 6.0+ recommended)
-- **Protocol Buffers**: `protoc` compiler and development libraries
-- **gRPC**: gRPC C++ development libraries and plugins
+- **C++ Compiler**: GCC 9.0+ or Clang with C++17 support
 
-### Ubuntu/Debian Installation
+**Note**: All gRPC and Protocol Buffer dependencies are now managed automatically by Bazel through the `MODULE.bazel` file. No manual installation of system libraries is required!
+
+## Dependencies
+
+### Automatic Dependency Management
+
+All dependencies are now managed automatically by Bazel through the `MODULE.bazel` file. This ensures:
+
+- ✅ **Reproducible builds** across different environments
+- ✅ **No system library conflicts** 
+- ✅ **Automatic version resolution**
+- ✅ **Cross-platform compatibility**
+
+### Bazel Dependencies (Auto-managed)
+
+| Module | Version | Description |
+|--------|---------|-------------|
+| **rules_proto** | 1.0.0 | Protocol buffer rules for Bazel |
+| **rules_cc** | 0.0.9 | C++ rules for Bazel |
+| **bazel_skylib** | 1.4.2 | Skylib utilities for Bazel |
+| **com_google_protobuf** | 21.12 | Protocol Buffers library |
+| **rules_proto_grpc** | 4.1.1 | gRPC protocol buffer rules |
+| **com_github_grpc_grpc** | 1.50.1 | gRPC C++ library |
+| **upb** | 0.0.0-20221230-1.1.0 | Micro protobuf library |
+| **re2** | 2022-12-01 | Regular expression library |
+| **abseil-cpp** | 20220623.1 | Google's C++ common libraries |
+| **zlib** | 1.2.13 | Compression library |
+| **c-ares** | 1.19.1 | Asynchronous DNS resolution library |
+
+### Simple Installation
 
 ```bash
-# Install Bazel
+# Install Bazel only
 curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
 sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
 sudo apt update && sudo apt install bazel
 
-# Install protobuf and gRPC
-sudo apt install protobuf-compiler libprotobuf-dev libgrpc++-dev protobuf-compiler-grpc
+# Install C++ compiler
+sudo apt install build-essential
 ```
+
+### Version Compatibility
+
+| Bazel | Protobuf | gRPC | C++ Standard |
+|-------|----------|------|--------------|
+| 6.0+  | 21.12    | 1.50.1| C++17        |
+| 7.0+  | 21.12    | 1.50.1| C++17        |
 
 ## Build
 
