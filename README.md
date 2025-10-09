@@ -70,17 +70,41 @@ All dependencies are now managed automatically by Bazel through the `MODULE.baze
 | **grpc** | 1.74.0 | gRPC C++ library |
 | **gtest** | 1.14.0 | Google Test framework (via WORKSPACE) |
 
-### Simple Installation
+### Automatic Installation (Recommended)
 
 ```bash
-# Install Bazel only
+# Run the setup script - it will check and install all dependencies automatically
+./setup.sh
+```
+
+The setup script will:
+- ✅ **Check all prerequisites** (Bazel, CMake, protoc, gRPC, C++ compiler, etc.)
+- ✅ **Install missing dependencies** automatically
+- ✅ **Update outdated dependencies** if needed
+- ✅ **Provide clear instructions** for manual installation if needed
+
+### Manual Installation (Alternative)
+
+If you prefer manual installation:
+
+```bash
+# Install Bazel
 curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
 sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
 sudo apt update && sudo apt install bazel
 
-# Install C++ compiler
-sudo apt install build-essential
+# Install CMake and build tools
+sudo apt install cmake build-essential
+
+# Install protobuf and gRPC
+sudo apt install protobuf-compiler libprotobuf-dev libgrpc++-dev libgrpc-dev
+
+# Install Google Test (optional, for tests)
+sudo apt install libgtest-dev
+
+# Install lcov (optional, for coverage)
+sudo apt install lcov
 ```
 
 ### Version Compatibility
@@ -211,7 +235,7 @@ genhtml bazel-testlogs/coverage/combined/lcov/coverage.dat --output-directory co
 git clone <repository-url>
 cd HelloWorldGrpc
 
-# Run setup script (checks prerequisites and installs missing dependencies)
+# Run setup script (automatically installs all dependencies)
 ./setup.sh
 
 # Build the project
@@ -225,6 +249,18 @@ bazel run //srv:server
 
 # Run client (in another terminal)
 bazel run //cli:client
+```
+
+### Alternative: CMake Build
+
+```bash
+# After running ./setup.sh, you can also use CMake
+./run_cmake_tests.sh
+
+# Or manually:
+mkdir build_cmake && cd build_cmake
+cmake ..
+make
 ```
 
 ### Contributing

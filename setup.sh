@@ -176,6 +176,87 @@ install_protoc() {
     fi
 }
 
+# Function to install gRPC dependencies
+install_grpc() {
+    print_info "Installing gRPC dependencies..."
+    
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command_exists apt-get; then
+            print_info "Installing gRPC on Ubuntu/Debian..."
+            sudo apt update
+            sudo apt install -y libgrpc++-dev libgrpc-dev
+        else
+            print_error "apt-get not found. Please install gRPC manually."
+            return 1
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        if command_exists brew; then
+            print_info "Installing gRPC on macOS via Homebrew..."
+            brew install grpc
+        else
+            print_error "Homebrew not found. Please install gRPC manually or install Homebrew first."
+            return 1
+        fi
+    else
+        print_error "Unsupported OS: $OSTYPE. Please install gRPC manually."
+        return 1
+    fi
+}
+
+# Function to install pkg-config
+install_pkg_config() {
+    print_info "Installing pkg-config..."
+    
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command_exists apt-get; then
+            print_info "Installing pkg-config on Ubuntu/Debian..."
+            sudo apt update
+            sudo apt install -y pkg-config
+        else
+            print_error "apt-get not found. Please install pkg-config manually."
+            return 1
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        if command_exists brew; then
+            print_info "Installing pkg-config on macOS via Homebrew..."
+            brew install pkg-config
+        else
+            print_error "Homebrew not found. Please install pkg-config manually or install Homebrew first."
+            return 1
+        fi
+    else
+        print_error "Unsupported OS: $OSTYPE. Please install pkg-config manually."
+        return 1
+    fi
+}
+
+# Function to install Google Test
+install_gtest() {
+    print_info "Installing Google Test..."
+    
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command_exists apt-get; then
+            print_info "Installing Google Test on Ubuntu/Debian..."
+            sudo apt update
+            sudo apt install -y libgtest-dev
+        else
+            print_error "apt-get not found. Please install Google Test manually."
+            return 1
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        if command_exists brew; then
+            print_info "Installing Google Test on macOS via Homebrew..."
+            brew install googletest
+        else
+            print_error "Homebrew not found. Please install Google Test manually or install Homebrew first."
+            return 1
+        fi
+    else
+        print_error "Unsupported OS: $OSTYPE. Please install Google Test manually."
+        return 1
+    fi
+}
+
 # Function to install C++ compiler
 install_cpp_compiler() {
     print_info "Installing C++ compiler..."
@@ -316,6 +397,35 @@ main() {
         missing_deps+=("protoc")
     fi
     
+    # Check pkg-config first
+    print_info "Checking pkg-config..."
+    if command_exists pkg-config; then
+        print_success "pkg-config found"
+        
+        # Check gRPC (for CMake builds)
+        print_info "Checking gRPC..."
+        if pkg-config --exists grpc++; then
+            local grpc_version=$(pkg-config --modversion grpc++)
+            print_success "gRPC $grpc_version"
+        else
+            print_warning "gRPC not found (required for CMake builds)"
+            missing_deps+=("grpc")
+        fi
+        
+        # Check Google Test (optional, for tests)
+        print_info "Checking Google Test (optional, for tests)..."
+        if pkg-config --exists gtest; then
+            local gtest_version=$(pkg-config --modversion gtest)
+            print_success "Google Test $gtest_version"
+        else
+            print_warning "Google Test not found (optional, for tests)"
+            missing_deps+=("gtest")
+        fi
+    else
+        print_warning "pkg-config not found (required for dependency checking)"
+        missing_deps+=("pkg-config")
+    fi
+    
     # Check C++ compiler
     print_info "Checking C++ compiler..."
     local cpp_compiler_found=false
@@ -417,6 +527,15 @@ main() {
                     "protoc")
                         install_protoc
                         ;;
+                    "pkg-config")
+                        install_pkg_config
+                        ;;
+                    "grpc")
+                        install_grpc
+                        ;;
+                    "gtest")
+                        install_gtest
+                        ;;
                     "cpp_compiler")
                         install_cpp_compiler
                         ;;
@@ -440,6 +559,14 @@ main() {
                     "protoc")
                         print_info "Updating protoc..."
                         install_protoc
+                        ;;
+                    "grpc")
+                        print_info "Updating gRPC..."
+                        install_grpc
+                        ;;
+                    "gtest")
+                        print_info "Updating Google Test..."
+                        install_gtest
                         ;;
                     "gcc"|"clang")
                         print_info "Updating C++ compiler..."
