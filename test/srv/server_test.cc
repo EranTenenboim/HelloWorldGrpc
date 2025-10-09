@@ -9,6 +9,8 @@
 #include <grpcpp/server_context.h>
 #include <memory>
 #include <string>
+#include <thread>
+#include <atomic>
 
 #include "proto/helloworld.grpc.pb.h"
 
