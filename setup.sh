@@ -47,6 +47,7 @@ get_version() {
 }
 
 # Function to compare version numbers
+# Returns: 0 if equal, 1 if version1 > version2, 2 if version1 < version2
 version_compare() {
     local version1="$1"
     local version2="$2"
@@ -55,6 +56,7 @@ version_compare() {
     fi
     local IFS=.
     local i ver1=($version1) ver2=($version2)
+    # Pad shorter version with zeros
     for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
         ver1[i]=0
     done
@@ -63,13 +65,13 @@ version_compare() {
             ver2[i]=0
         fi
         if ((10#${ver1[i]} > 10#${ver2[i]})); then
-            return 1
+            return 1  # version1 > version2
         fi
         if ((10#${ver1[i]} < 10#${ver2[i]})); then
-            return 2
+            return 2  # version1 < version2
         fi
     done
-    return 0
+    return 0  # equal
 }
 
 # Function to check if version meets minimum requirement
@@ -77,7 +79,14 @@ version_meets_requirement() {
     local current_version="$1"
     local required_version="$2"
     version_compare "$current_version" "$required_version"
-    return $?
+    local result=$?
+    # Return 0 (success) if current >= required
+    # Return 1 (failure) if current < required
+    if [[ $result -eq 0 || $result -eq 1 ]]; then
+        return 0  # current >= required
+    else
+        return 1  # current < required
+    fi
 }
 
 # Function to install Bazel
@@ -345,7 +354,7 @@ main() {
         print_success "lcov $lcov_version"
     else
         print_warning "lcov not found (optional, for coverage reports)"
-        missing_deps+=("lcov")
+        # Don't add to missing_deps since it's optional
     fi
     
     echo ""
@@ -359,6 +368,10 @@ main() {
         echo "  bazel run //srv:server"
         echo "  bazel run //cli:client"
         echo "  ./run_tests.sh"
+        echo ""
+        print_info "Optional: Install lcov for coverage reports:"
+        echo "  sudo apt install lcov  # Ubuntu/Debian"
+        echo "  brew install lcov     # macOS"
         return 0
     fi
     
