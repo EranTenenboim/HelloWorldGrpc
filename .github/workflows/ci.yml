@@ -27,8 +27,6 @@ jobs:
 
       - name: Setup Bazel
         uses: bazelbuild/setup-bazelisk@v2
-        with:
-          bazel-version: "6.0.0"
 
       - name: Verify Bazel installation
         run: |
