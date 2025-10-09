@@ -22,16 +22,24 @@ jobs:
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
 
-      - name: Install Bazel
+      - name: Install Bazel (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
           sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
           sudo apt update
           sudo apt install -y bazel
+
+      - name: Install Bazel (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install bazel
 
       - name: Verify Bazel installation
         run: |
@@ -53,6 +61,8 @@ jobs:
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
@@ -86,6 +96,8 @@ jobs:
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
@@ -141,6 +153,8 @@ jobs:
           sudo apt install -y cmake build-essential
           sudo apt install -y libprotobuf-dev protobuf-compiler
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev
 
       - name: Build and test with CMake
@@ -176,13 +190,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Bazel
+      - name: Install Bazel (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
           sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
           sudo apt update
           sudo apt install -y bazel
+
+      - name: Install Bazel (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install bazel
 
       - name: Setup C++ compiler (Ubuntu)
         if: runner.os == 'Linux'
@@ -233,6 +253,8 @@ jobs:
           sudo apt install -y cmake build-essential
           sudo apt install -y libprotobuf-dev protobuf-compiler
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev
 
       - name: Setup CMake dependencies (macOS)
@@ -260,6 +282,8 @@ jobs:
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
@@ -316,6 +340,8 @@ jobs:
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
           sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
+          # Try to install gRPC tools if available
+          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg

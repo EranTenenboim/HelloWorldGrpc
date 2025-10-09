@@ -29,6 +29,14 @@ if(NOT gRPC_FOUND)
     endif()
 endif()
 
+# Check if grpc_cpp_plugin exists
+find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
+if(GRPC_CPP_PLUGIN)
+    message(STATUS "Found grpc_cpp_plugin: ${GRPC_CPP_PLUGIN}")
+else()
+    message(WARNING "grpc_cpp_plugin not found - gRPC generation will be skipped")
+endif()
+
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto)
 
@@ -61,37 +69,22 @@ add_custom_command(
 )
 
 # Generate gRPC files (with fallback for missing plugin)
-if(TARGET gRPC::grpc_cpp_plugin)
+if(GRPC_CPP_PLUGIN)
     add_custom_command(
         OUTPUT ${GRPC_SRCS} ${GRPC_HDRS}
         COMMAND protoc
         ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
-             --plugin=protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
+             --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN}
              --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/proto
              ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
         COMMENT "Generating gRPC files"
     )
 else()
-    # Fallback: try to find grpc_cpp_plugin in PATH
-    find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
-    if(GRPC_CPP_PLUGIN)
-        add_custom_command(
-            OUTPUT ${GRPC_SRCS} ${GRPC_HDRS}
-            COMMAND protoc
-            ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
-                 --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN}
-                 --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/proto
-                 ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
-            COMMENT "Generating gRPC files"
-        )
-    else()
-        message(WARNING "grpc_cpp_plugin not found, skipping gRPC generation")
-        # Create empty files to avoid build errors
-        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.cc "// gRPC files not generated\n")
-        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h "// gRPC files not generated\n")
-    endif()
+    message(WARNING "grpc_cpp_plugin not found, skipping gRPC generation")
+    # Create empty files to avoid build errors
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.cc "// gRPC files not generated\n")
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h "// gRPC files not generated\n")
 endif()
 
 # Create protobuf library
