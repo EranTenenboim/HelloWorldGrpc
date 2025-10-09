@@ -1,21 +1,20 @@
+#include "server.h"
+
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
 #include <iostream>
 #include <memory>
 #include <string>
 
-#include "helloworld.grpc.pb.h"
+namespace helloworld {
 
-// Logic and data behind the server's behavior.
-class GreeterServiceImpl final : public helloworld::Greeter::Service {
- public:
-  grpc::Status SayHello(grpc::ServerContext* context, const helloworld::HelloRequest* request,
-                        helloworld::HelloReply* reply) override {
-    const std::string prefix("Hello ");
-    reply->set_message(prefix + request->name());
-    return grpc::Status::OK;
-  }
-};
+grpc::Status GreeterServiceImpl::SayHello(grpc::ServerContext* context, 
+                                           const helloworld::HelloRequest* request,
+                                           helloworld::HelloReply* reply) {
+  const std::string prefix("Hello ");
+  reply->set_message(prefix + request->name());
+  return grpc::Status::OK;
+}
 
 void RunServer() {
   const std::string server_address("0.0.0.0:50051");
@@ -37,11 +36,6 @@ void RunServer() {
   server->Wait();
 }
 
-int main(const int argc, const char* const argv[]) {
-  (void)argc;
-  (void)argv;
-  RunServer();
-  return 0;
-}
+}  // namespace helloworld
 
 
