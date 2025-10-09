@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, administrative ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, administrative ]
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -16,10 +16,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup prerequisites
+      - name: Install dependencies
         run: |
-          chmod +x setup.sh
-          ./setup.sh
+          sudo apt update
+          sudo apt install -y build-essential cmake
+          sudo apt install -y protobuf-compiler libprotobuf-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev pkg-config
+          sudo apt install -y lcov
+
+      - name: Setup Bazel
+        uses: bazelbuild/setup-bazelisk@v2
+        with:
+          bazel-version: "6.0.0"
 
       - name: Verify Bazel installation
         run: |
@@ -38,7 +47,7 @@ jobs:
       - name: Setup prerequisites
         run: |
           chmod +x setup.sh
-          ./setup.sh
+          echo "y" | ./setup.sh || true
 
       - name: Build all targets
         run: |
@@ -62,7 +71,7 @@ jobs:
       - name: Setup prerequisites
         run: |
           chmod +x setup.sh
-          ./setup.sh
+          echo "y" | ./setup.sh || true
 
       - name: Build all targets
         run: |
@@ -224,7 +233,7 @@ jobs:
       - name: Setup prerequisites
         run: |
           chmod +x setup.sh
-          ./setup.sh
+          echo "y" | ./setup.sh || true
 
       - name: Build all targets
         run: |
@@ -271,7 +280,7 @@ jobs:
       - name: Setup prerequisites
         run: |
           chmod +x setup.sh
-          ./setup.sh
+          echo "y" | ./setup.sh || true
 
       - name: Build with performance optimizations
         run: |
