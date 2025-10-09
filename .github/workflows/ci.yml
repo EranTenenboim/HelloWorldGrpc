@@ -63,7 +63,7 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //... --enable_bzlmod
+          bazel build //... --enable_bzlmod --enable_workspace --enable_bzlmod --enable_workspace
 
       - name: Verify build artifacts
         run: |
@@ -96,7 +96,7 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //...
+          bazel build //... --enable_bzlmod --enable_workspace
 
       - name: Run test suite
         run: |
@@ -106,13 +106,13 @@ jobs:
       - name: Run individual test suites
         run: |
           echo "Running client unit tests..."
-          bazel test //test/cli:client_test --test_output=all
+          bazel test //test/cli:client_test --test_output=all --enable_bzlmod --enable_workspace
           
           echo "Running server unit tests..."
-          bazel test //test/srv:server_test --test_output=all
+          bazel test //test/srv:server_test --test_output=all --enable_bzlmod --enable_workspace
           
           echo "Running integration tests..."
-          bazel test //test:integration_test --test_output=all
+          bazel test //test:integration_test --test_output=all --enable_bzlmod --enable_workspace
 
       - name: Generate test coverage
         run: |
@@ -207,11 +207,11 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //...
+          bazel build //... --enable_bzlmod --enable_workspace
 
       - name: Run tests
         run: |
-          bazel test //test:all_tests --test_output=all
+          bazel test //test:all_tests --test_output=all --enable_bzlmod --enable_workspace
 
   # Multi-platform testing (CMake)
   test-matrix-cmake:
@@ -270,7 +270,7 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //...
+          bazel build //... --enable_bzlmod --enable_workspace
 
       - name: Run security scan
         run: |
@@ -326,7 +326,7 @@ jobs:
 
       - name: Build with performance optimizations
         run: |
-          bazel build //... --compilation_mode=opt
+          bazel build //... --enable_bzlmod --enable_workspace --compilation_mode=opt
 
       - name: Run performance benchmarks
         run: |
