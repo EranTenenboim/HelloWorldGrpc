@@ -21,7 +21,9 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
 
@@ -52,7 +54,9 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
@@ -85,7 +89,9 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
@@ -140,7 +146,9 @@ jobs:
           sudo apt update
           sudo apt install -y cmake build-essential
           sudo apt install -y libprotobuf-dev protobuf-compiler
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev
 
       - name: Build and test with CMake
@@ -232,7 +240,9 @@ jobs:
           sudo apt update
           sudo apt install -y cmake build-essential
           sudo apt install -y libprotobuf-dev protobuf-compiler
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev
 
       - name: Setup CMake dependencies (macOS)
@@ -259,7 +269,9 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
@@ -315,7 +327,9 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake
           sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev grpc-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          # Install gRPC tools separately if available
+          sudo apt install -y grpc-dev-tools || echo "grpc-dev-tools not available, continuing..."
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
