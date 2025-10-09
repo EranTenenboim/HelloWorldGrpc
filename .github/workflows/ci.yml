@@ -25,8 +25,13 @@ jobs:
           sudo apt install -y libgtest-dev pkg-config
           sudo apt install -y lcov
 
-      - name: Setup Bazel
-        uses: bazelbuild/setup-bazelisk@v2
+      - name: Install Bazel
+        run: |
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
 
       - name: Verify Bazel installation
         run: |
@@ -42,10 +47,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup prerequisites
+      - name: Install dependencies
         run: |
-          chmod +x setup.sh
-          echo "y" | ./setup.sh || true
+          sudo apt update
+          sudo apt install -y build-essential cmake
+          sudo apt install -y protobuf-compiler libprotobuf-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev pkg-config
+          sudo apt install -y lcov
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
 
       - name: Build all targets
         run: |
@@ -66,10 +80,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup prerequisites
+      - name: Install dependencies
         run: |
-          chmod +x setup.sh
-          echo "y" | ./setup.sh || true
+          sudo apt update
+          sudo apt install -y build-essential cmake
+          sudo apt install -y protobuf-compiler libprotobuf-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev pkg-config
+          sudo apt install -y lcov
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
 
       - name: Build all targets
         run: |
@@ -228,10 +251,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup prerequisites
+      - name: Install dependencies
         run: |
-          chmod +x setup.sh
-          echo "y" | ./setup.sh || true
+          sudo apt update
+          sudo apt install -y build-essential cmake
+          sudo apt install -y protobuf-compiler libprotobuf-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev pkg-config
+          sudo apt install -y lcov
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
 
       - name: Build all targets
         run: |
@@ -275,10 +307,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup prerequisites
+      - name: Install dependencies
         run: |
-          chmod +x setup.sh
-          echo "y" | ./setup.sh || true
+          sudo apt update
+          sudo apt install -y build-essential cmake
+          sudo apt install -y protobuf-compiler libprotobuf-dev
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev pkg-config
+          sudo apt install -y lcov
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
 
       - name: Build with performance optimizations
         run: |
