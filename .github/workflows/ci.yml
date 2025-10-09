@@ -175,6 +175,7 @@ jobs:
     needs: build
     strategy:
       fail-fast: false
+      max-parallel: 2  # Limit parallel execution to prevent race conditions
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
         include:
@@ -227,11 +228,20 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //... --enable_bzlmod --enable_workspace
+          # Use isolated Bazel cache to prevent race conditions
+          bazel build //... --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }}
 
       - name: Run tests
         run: |
-          bazel test //test:all_tests --test_output=all --enable_bzlmod --enable_workspace
+          # Use isolated Bazel cache and test cache to prevent race conditions
+          bazel test //test:all_tests --test_output=all --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }} --test_output=errors
+
+      - name: Cleanup Bazel cache
+        if: always()
+        run: |
+          # Clean up isolated cache to prevent conflicts
+          rm -rf /tmp/bazel-cache-${{ matrix.os }}
+          bazel clean --expunge || true
 
   # Multi-platform testing (CMake)
   test-matrix-cmake:
@@ -240,6 +250,7 @@ jobs:
     needs: build
     strategy:
       fail-fast: false
+      max-parallel: 2  # Limit parallel execution to prevent race conditions
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
     steps:
@@ -264,8 +275,16 @@ jobs:
 
       - name: Build and test with CMake
         run: |
+          # Use isolated build directory to prevent race conditions
+          export BUILD_DIR="build_cmake_${{ matrix.os }}"
           chmod +x run_cmake_tests.sh
           ./run_cmake_tests.sh
+
+      - name: Cleanup CMake build
+        if: always()
+        run: |
+          # Clean up isolated build directory to prevent conflicts
+          rm -rf build_cmake_${{ matrix.os }}
 
   # Security and quality checks
   security:
