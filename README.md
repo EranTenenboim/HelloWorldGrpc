@@ -1,11 +1,11 @@
 # HelloWorldGrpc
 
-A simple gRPC Hello World example in C++ using Bazel build system with generalized file discovery.
+A simple gRPC Hello World example in C++ using Bazel build system with explicit target definitions.
 
 ## Features
 
-- **Generalized Build Configuration**: Uses Bazel `glob()` patterns to automatically discover source files
-- **Automatic File Discovery**: Add new `.proto`, `.cc` files and they're automatically included in the build
+- **Explicit Build Configuration**: Uses explicit target definitions in BUILD files for better control
+- **Modular Structure**: Separate BUILD files for each component (proto, server, client)
 - **Modern Bazel Setup**: Uses Bzlmod (MODULE.bazel) for dependency management
 - **Clean Project Structure**: Organized with separate directories for protocol definitions, server, and client code
 
@@ -13,13 +13,15 @@ A simple gRPC Hello World example in C++ using Bazel build system with generaliz
 
 ```
 HelloWorldGrpc/
-├── BUILD                 # Bazel build configuration with glob patterns
 ├── MODULE.bazel         # Bzlmod module definition
 ├── proto/               # Protocol buffer definitions
+│   ├── BUILD.bazel      # Proto build configuration
 │   └── helloworld.proto
 ├── srv/                 # Server source code
+│   ├── BUILD            # Server build configuration
 │   └── server.cc
 ├── cli/                 # Client source code
+│   ├── BUILD            # Client build configuration
 │   └── client.cc
 └── README.md
 ```
@@ -80,15 +82,15 @@ sudo apt install build-essential
 
 ## Build
 
-The build system automatically discovers files using glob patterns:
+The build system uses explicit target definitions in BUILD files:
 
 ```bash
 # Build all targets
 bazel build //...
 
 # Build specific targets
-bazel build //:hello_server
-bazel build //:hello_client
+bazel build //srv:server
+bazel build //cli:client
 ```
 
 ### Generated Files
@@ -103,33 +105,33 @@ Bazel will automatically generate the necessary protobuf and gRPC files:
 
 ```bash
 # Run server in foreground
-bazel run //:hello_server
+bazel run //srv:server
 
 # Or run the binary directly
-./bazel-bin/hello_server
+./bazel-bin/srv/server
 ```
 
 ### Run the Client
 
 ```bash
 # Run client
-bazel run //:hello_client
+bazel run //cli:client
 
 # Or run the binary directly
-./bazel-bin/hello_client
+./bazel-bin/cli/client
 ```
 
 ## Development
 
 ### Adding New Files
 
-The build system uses glob patterns, so you can easily add new files:
+To add new files, you need to update the corresponding BUILD files:
 
-- **New Protocol Files**: Add `.proto` files to `proto/` directory
-- **New Server Files**: Add `.cc` files to `srv/` directory  
-- **New Client Files**: Add `.cc` files to `cli/` directory
+- **New Protocol Files**: Add `.proto` files to `proto/` directory and update `proto/BUILD.bazel`
+- **New Server Files**: Add `.cc` files to `srv/` directory and update `srv/BUILD`
+- **New Client Files**: Add `.cc` files to `cli/` directory and update `cli/BUILD`
 
-The build system will automatically discover and include them.
+The build system uses explicit target definitions for better control and clarity.
 
 ### Clean Build
 
@@ -151,11 +153,12 @@ bazel clean && bazel build //...
 
 ### Build Configuration
 
-The `BUILD` file uses the following glob patterns:
-- `glob(["proto/*.proto"])` - Discovers all protocol buffer files
-- `glob(["srv/*.cc"])` - Discovers all server source files
-- `glob(["cli/*.cc"])` - Discovers all client source files
-- `glob(["proto/*.grpc.pb.cc"], allow_empty = True)` - Discovers generated gRPC files
+The project uses separate BUILD files for each component:
+- `proto/BUILD.bazel` - Defines protocol buffer and gRPC targets
+- `srv/BUILD` - Defines server binary target
+- `cli/BUILD` - Defines client binary target
+
+Each BUILD file explicitly lists the source files and dependencies for better build control.
 
 ## License
 
