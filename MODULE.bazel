@@ -10,3 +10,6 @@ bazel_dep(name = "rules_cc", version = "0.1.4")
 # Protocol Buffers and gRPC
 bazel_dep(name = "protobuf", version = "32.0")
 bazel_dep(name = "grpc", version = "1.74.0")
+
+# Testing framework
+bazel_dep(name = "gtest", version = "1.14.0")
