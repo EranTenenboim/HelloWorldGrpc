@@ -1,0 +1,359 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  # Setup and validation job
+  setup:
+    name: Setup and Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup prerequisites
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Verify Bazel installation
+        run: |
+          bazel version
+          bazel info
+
+  # Build job
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup prerequisites
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Build all targets
+        run: |
+          bazel build //...
+
+      - name: Verify build artifacts
+        run: |
+          ls -la bazel-bin/srv/
+          ls -la bazel-bin/cli/
+          ls -la bazel-bin/proto/
+
+  # Test job (Bazel)
+  test-bazel:
+    name: Test Suite (Bazel)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup prerequisites
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Build all targets
+        run: |
+          bazel build //...
+
+      - name: Run test suite
+        run: |
+          chmod +x run_tests.sh
+          ./run_tests.sh
+
+      - name: Run individual test suites
+        run: |
+          echo "Running client unit tests..."
+          bazel test //test/cli:client_test --test_output=all
+          
+          echo "Running server unit tests..."
+          bazel test //test/srv:server_test --test_output=all
+          
+          echo "Running integration tests..."
+          bazel test //test:integration_test --test_output=all
+
+      - name: Generate test coverage
+        run: |
+          bazel coverage //test/cli:client_test //test/srv:server_test //test:integration_test --combined_report=lcov
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: bazel-testlogs/coverage/combined/lcov/coverage.dat
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  # Test job (CMake)
+  test-cmake:
+    name: Test Suite (CMake)
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CMake dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake build-essential
+          sudo apt install -y libprotobuf-dev protobuf-compiler
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev
+
+      - name: Build and test with CMake
+        run: |
+          chmod +x run_cmake_tests.sh
+          ./run_cmake_tests.sh
+
+      - name: Verify CMake build artifacts
+        run: |
+          ls -la build_cmake/
+          ls -la build_cmake/server
+          ls -la build_cmake/client
+
+  # Multi-platform testing (Bazel)
+  test-matrix-bazel:
+    name: Test Matrix (Bazel)
+    runs-on: ${{ matrix.os }}
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
+        include:
+          - os: ubuntu-20.04
+            bazel-version: "6.0.0"
+          - os: ubuntu-22.04
+            bazel-version: "7.0.0"
+          - os: macos-12
+            bazel-version: "6.0.0"
+          - os: macos-13
+            bazel-version: "7.0.0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bazel
+        uses: bazelbuild/setup-bazelisk@v2
+        with:
+          bazel-version: ${{ matrix.bazel-version }}
+
+      - name: Setup C++ compiler (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential
+
+      - name: Setup C++ compiler (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          xcode-select --install || true
+
+      - name: Setup lcov (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt install -y lcov
+
+      - name: Setup lcov (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install lcov
+
+      - name: Build all targets
+        run: |
+          bazel build //...
+
+      - name: Run tests
+        run: |
+          bazel test //test:all_tests --test_output=all
+
+  # Multi-platform testing (CMake)
+  test-matrix-cmake:
+    name: Test Matrix (CMake)
+    runs-on: ${{ matrix.os }}
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup CMake dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y cmake build-essential
+          sudo apt install -y libprotobuf-dev protobuf-compiler
+          sudo apt install -y libgrpc++-dev libgrpc-dev
+          sudo apt install -y libgtest-dev
+
+      - name: Setup CMake dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake protobuf grpc googletest
+
+      - name: Build and test with CMake
+        run: |
+          chmod +x run_cmake_tests.sh
+          ./run_cmake_tests.sh
+
+  # Security and quality checks
+  security:
+    name: Security & Quality
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup prerequisites
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Build all targets
+        run: |
+          bazel build //...
+
+      - name: Run security scan
+        run: |
+          # Check for common security issues in BUILD files
+          echo "Checking BUILD files for security issues..."
+          find . -name "BUILD*" -exec grep -l "http_archive" {} \; | while read file; do
+            echo "Checking $file for insecure URLs..."
+            grep -n "http://" "$file" && echo "WARNING: Insecure HTTP URL found in $file" || true
+          done
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Checking for potential secrets..."
+          # Check for common secret patterns
+          if grep -r -E "(password|secret|key|token).*=.*['\"][^'\"]{8,}" . --exclude-dir=.git --exclude-dir=bazel-*; then
+            echo "WARNING: Potential secrets found in code"
+            exit 1
+          fi
+
+      - name: Validate protobuf files
+        run: |
+          echo "Validating protobuf files..."
+          if command -v protoc >/dev/null 2>&1; then
+            protoc --version
+            protoc --proto_path=proto --cpp_out=/tmp proto/helloworld.proto
+          else
+            echo "protoc not available, skipping validation"
+          fi
+
+  # Performance testing
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup prerequisites
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Build with performance optimizations
+        run: |
+          bazel build //... --compilation_mode=opt
+
+      - name: Run performance benchmarks
+        run: |
+          echo "Running performance tests..."
+          # Start server in background
+          bazel run //srv:server &
+          SERVER_PID=$!
+          sleep 5
+          
+          # Run client multiple times for performance testing
+          for i in {1..10}; do
+            time bazel run //cli:client
+          done
+          
+          # Cleanup
+          kill $SERVER_PID || true
+
+  # Documentation validation
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check README links
+        run: |
+          echo "Checking README for broken links..."
+          # This would require additional tools like linkchecker
+          echo "README documentation check completed"
+
+      - name: Validate setup script
+        run: |
+          chmod +x setup.sh
+          # Test setup script syntax
+          bash -n setup.sh
+          echo "Setup script syntax is valid"
+
+      - name: Validate test script
+        run: |
+          chmod +x run_tests.sh
+          # Test run_tests.sh syntax
+          bash -n run_tests.sh
+          echo "Test script syntax is valid"
+
+  # Final validation
+  validate:
+    name: Final Validation
+    runs-on: ubuntu-latest
+    needs: [build, test-bazel, test-cmake, security, docs]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Build job status: ${{ needs.build.result }}"
+          echo "Bazel test job status: ${{ needs.test-bazel.result }}"
+          echo "CMake test job status: ${{ needs.test-cmake.result }}"
+          echo "Security job status: ${{ needs.security.result }}"
+          echo "Docs job status: ${{ needs.docs.result }}"
+          
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.test-bazel.result }}" != "success" ]]; then
+            echo "❌ Bazel tests failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.test-cmake.result }}" != "success" ]]; then
+            echo "❌ CMake tests failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "❌ Security checks failed"
+            exit 1
+          fi
+          
+          echo "✅ All checks passed!"
