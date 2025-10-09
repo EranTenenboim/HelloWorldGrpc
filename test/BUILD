@@ -15,15 +15,13 @@ cc_test(
     visibility = ["//visibility:public"],
 )
 
-# Test suite that runs all tests
-cc_test(
+# Test suite that runs all tests - using test_suite instead of cc_test
+test_suite(
     name = "all_tests",
-    srcs = [],
-    deps = [
+    tests = [
         "//test/cli:client_test",
         "//test/srv:server_test", 
         "//test:integration_test",
     ],
-    testonly = True,
     visibility = ["//visibility:public"],
 )
