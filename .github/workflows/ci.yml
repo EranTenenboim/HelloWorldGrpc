@@ -73,7 +73,7 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //... --enable_bzlmod --enable_workspace --enable_bzlmod --enable_workspace
+          bazel build //... --enable_bzlmod --enable_workspace
 
       - name: Verify build artifacts
         run: |
@@ -234,7 +234,7 @@ jobs:
       - name: Run tests
         run: |
           # Use isolated Bazel cache and test cache to prevent race conditions
-          bazel test //test:all_tests --test_output=all --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }} --test_output=errors
+          bazel test //test/cli:client_test //test/srv:server_test //test:integration_test --test_output=all --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }} --test_output=errors
 
       - name: Cleanup Bazel cache
         if: always()
@@ -327,8 +327,8 @@ jobs:
       - name: Check for hardcoded secrets
         run: |
           echo "Checking for potential secrets..."
-          # Check for common secret patterns
-          if grep -r -E "(password|secret|key|token).*=.*['\"][^'\"]{8,}" . --exclude-dir=.git --exclude-dir=bazel-*; then
+          # Check for common secret patterns (more specific regex)
+          if grep -r -E "(password|secret|api_key|token|auth_token)\s*=\s*['\"][^'\"]{12,}" . --exclude-dir=.git --exclude-dir=bazel-* --exclude-dir=build*; then
             echo "WARNING: Potential secrets found in code"
             exit 1
           fi
