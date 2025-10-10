@@ -1,9 +1,0 @@
-module(
-    name = "grpc_example",
-    version = "1.0.0",
-)
-
-bazel_dep(name = "rules_proto", version = "5.3.0-21.7")
-bazel_dep(name = "rules_cc", version = "0.1.4")
-bazel_dep(name = "grpc", version = "1.74.0")
-bazel_dep(name = "protobuf", version = "32.0")
