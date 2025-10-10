@@ -9,8 +9,8 @@ cc_test(
         "//proto:helloworld_cc_proto",
         "//proto:helloworld_grpc_cc_proto",
         "@grpc//:grpc++",
-        "@gtest//:gtest",
-        "@gtest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
     visibility = ["//visibility:public"],
 )

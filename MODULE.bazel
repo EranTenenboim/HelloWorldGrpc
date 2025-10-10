@@ -12,4 +12,4 @@ bazel_dep(name = "protobuf", version = "32.0")
 bazel_dep(name = "grpc", version = "1.74.0")
 
 # Google Test
-bazel_dep(name = "gtest", version = "1.14.0")
+bazel_dep(name = "googletest", version = "1.14.0")
