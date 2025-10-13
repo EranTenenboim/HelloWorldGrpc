@@ -144,59 +144,12 @@ install_bazel() {
             print_error "apt-get not found. Please install Bazel manually."
             return 1
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS
-        if command_exists brew; then
-            print_info "Installing Bazel on macOS via Homebrew..."
-            # Check if bazelisk is installed and unlink it first
-            if brew list bazelisk >/dev/null 2>&1; then
-                print_info "Unlinking bazelisk to avoid conflict..."
-                brew unlink bazelisk
-            fi
-            brew install bazel
-        else
-            print_error "Homebrew not found. Please install Bazel manually or install Homebrew first."
-            return 1
-        fi
     else
-        print_error "Unsupported OS: $OSTYPE. Please install Bazel manually."
+        print_error "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
         return 1
     fi
 }
 
-# Function to install CMake
-install_cmake() {
-    print_info "Installing CMake..."
-    
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if command_exists apt-get; then
-            print_info "Installing CMake on Ubuntu/Debian..."
-            # Try to install without sudo first, then with sudo if needed
-            if apt update && apt install -y cmake build-essential 2>/dev/null; then
-                print_success "CMake installed successfully"
-            elif sudo apt update && sudo apt install -y cmake build-essential; then
-                print_success "CMake installed successfully with sudo"
-            else
-                print_error "Failed to install CMake. Please run: sudo apt update && sudo apt install -y cmake build-essential"
-                return 1
-            fi
-        else
-            print_error "apt-get not found. Please install CMake manually."
-            return 1
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists brew; then
-            print_info "Installing CMake on macOS via Homebrew..."
-            brew install cmake
-        else
-            print_error "Homebrew not found. Please install CMake manually or install Homebrew first."
-            return 1
-        fi
-    else
-        print_error "Unsupported OS: $OSTYPE. Please install CMake manually."
-        return 1
-    fi
-}
 
 # Function to install protoc
 install_protoc() {
@@ -218,16 +171,8 @@ install_protoc() {
             print_error "apt-get not found. Please install protoc manually."
             return 1
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists brew; then
-            print_info "Installing protoc on macOS via Homebrew..."
-            brew install protobuf pkg-config
-        else
-            print_error "Homebrew not found. Please install protoc manually or install Homebrew first."
-            return 1
-        fi
     else
-        print_error "Unsupported OS: $OSTYPE. Please install protoc manually."
+        print_error "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
         return 1
     fi
 }
@@ -256,16 +201,8 @@ install_grpc() {
             print_error "apt-get not found. Please install gRPC manually."
             return 1
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists brew; then
-            print_info "Installing gRPC on macOS via Homebrew..."
-            brew install grpc
-        else
-            print_error "Homebrew not found. Please install gRPC manually or install Homebrew first."
-            return 1
-        fi
     else
-        print_error "Unsupported OS: $OSTYPE. Please install gRPC manually."
+        print_error "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
         return 1
     fi
 }
@@ -283,16 +220,8 @@ install_pkg_config() {
             print_error "apt-get not found. Please install pkg-config manually."
             return 1
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists brew; then
-            print_info "Installing pkg-config on macOS via Homebrew..."
-            brew install pkg-config
-        else
-            print_error "Homebrew not found. Please install pkg-config manually or install Homebrew first."
-            return 1
-        fi
     else
-        print_error "Unsupported OS: $OSTYPE. Please install pkg-config manually."
+        print_error "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
         return 1
     fi
 }
@@ -310,16 +239,8 @@ install_gtest() {
             print_error "apt-get not found. Please install Google Test manually."
             return 1
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists brew; then
-            print_info "Installing Google Test on macOS via Homebrew..."
-            brew install googletest
-        else
-            print_error "Homebrew not found. Please install Google Test manually or install Homebrew first."
-            return 1
-        fi
     else
-        print_error "Unsupported OS: $OSTYPE. Please install Google Test manually."
+        print_error "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
         return 1
     fi
 }
@@ -337,16 +258,8 @@ install_cpp_compiler() {
             print_error "apt-get not found. Please install C++ compiler manually."
             return 1
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists xcode-select; then
-            print_info "Installing Xcode command line tools on macOS..."
-            xcode-select --install
-        else
-            print_error "xcode-select not found. Please install Xcode command line tools manually."
-            return 1
-        fi
     else
-        print_error "Unsupported OS: $OSTYPE. Please install C++ compiler manually."
+        print_error "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
         return 1
     fi
 }
@@ -362,14 +275,8 @@ install_lcov() {
         else
             print_warning "apt-get not found. Please install lcov manually for coverage reports."
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        if command_exists brew; then
-            brew install lcov
-        else
-            print_warning "Homebrew not found. Please install lcov manually for coverage reports."
-        fi
     else
-        print_warning "Unsupported OS: $OSTYPE. Please install lcov manually for coverage reports."
+        print_warning "Unsupported OS: $OSTYPE. This project only supports Ubuntu 22.04 and newer."
     fi
 }
 

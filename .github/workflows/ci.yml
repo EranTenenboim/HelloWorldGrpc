@@ -75,22 +75,17 @@ jobs:
       fail-fast: false  # Don't stop on first failure, let all matrix jobs run
       max-parallel: 4  # Run all matrix jobs in parallel
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
+        os: [ubuntu-22.04, ubuntu-24.04]
         include:
-          - os: ubuntu-20.04
-            bazel-version: "6.0.0"
           - os: ubuntu-22.04
             bazel-version: "7.0.0"
-          - os: macos-12
-            bazel-version: "6.0.0"
-          - os: macos-13
-            bazel-version: "7.0.0"
+          - os: ubuntu-24.04
+            bazel-version: "8.0.0"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Bazel (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Install Bazel
         run: |
           curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
           sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
@@ -98,31 +93,14 @@ jobs:
           sudo apt update
           sudo apt install -y bazel
 
-      - name: Install Bazel (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install bazel
-
-      - name: Setup C++ compiler (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Setup C++ compiler
         run: |
           sudo apt update
           sudo apt install -y build-essential
 
-      - name: Setup C++ compiler (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          xcode-select --install || true
-
-      - name: Setup lcov (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Setup lcov
         run: |
           sudo apt install -y lcov
-
-      - name: Setup lcov (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install lcov
 
       - name: Build all targets
         run: |
