@@ -36,9 +36,9 @@ class IntegrationTest : public ::testing::Test {
       server_ready_ = true;
       
       // Wait for server to be ready
-      std::unique_lock<std::mutex> lock(server_mutex_);
-      server_cv_.wait(lock, [this] { return server_ready_; });
-      
+      //std::unique_lock<std::mutex> lock(server_mutex_);
+      //server_cv_.wait(lock, [this] { return server_ready_; });
+      server_cv_.notify_all();
       server_->Wait();
     });
     

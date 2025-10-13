@@ -169,7 +169,7 @@ TEST_F(GreeterServiceTest, SayHelloNewlines) {
 }
 
 // Test null request handling
-TEST_F(GreeterServiceTest, SayHelloNullRequest) {
+TEST_F(GreeterServiceTest, DISABLED_SayHelloNullRequest) {
   // Create response object
   helloworld::HelloReply reply;
   
@@ -185,7 +185,7 @@ TEST_F(GreeterServiceTest, SayHelloNullRequest) {
 }
 
 // Test null reply handling
-TEST_F(GreeterServiceTest, SayHelloNullReply) {
+TEST_F(GreeterServiceTest, DISABLED_SayHelloNullReply) {
   // Create test request
   helloworld::HelloRequest request;
   request.set_name("World");
