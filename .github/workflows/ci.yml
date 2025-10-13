@@ -64,88 +64,16 @@ jobs:
           ls -la bazel-bin/cli/
           ls -la bazel-bin/proto/
 
-  # Test job (Bazel)
-  test-bazel:
-    name: Test Suite (Bazel)
-    runs-on: ubuntu-latest
-    needs: build
-    if: always() && needs.build.result == 'success'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run setup script
-        run: |
-          chmod +x setup.sh
-          echo "y" | ./setup.sh
-
-      - name: Build all targets
-        run: |
-          bazel build //... --enable_bzlmod --enable_workspace
-
-      - name: Run test suite
-        run: |
-          chmod +x run_tests.sh
-          ./run_tests.sh
-
-      - name: Run individual test suites
-        run: |
-          echo "Running client unit tests..."
-          bazel test //test/cli:client_test --test_output=all --enable_bzlmod --enable_workspace
-          
-          echo "Running server unit tests..."
-          bazel test //test/srv:server_test --test_output=all --enable_bzlmod --enable_workspace
-          
-          echo "Running integration tests..."
-          bazel test //test:integration_test --test_output=all --enable_bzlmod --enable_workspace
-
-      - name: Generate test coverage
-        run: |
-          bazel coverage //test/cli:client_test //test/srv:server_test //test:integration_test --combined_report=lcov
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          file: bazel-testlogs/coverage/combined/lcov/coverage.dat
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-  # Test job (CMake)
-  test-cmake:
-    name: Test Suite (CMake)
-    runs-on: ubuntu-latest
-    needs: [build, test-bazel]
-    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run setup script
-        run: |
-          chmod +x setup.sh
-          echo "y" | ./setup.sh
-
-      - name: Build and test with CMake
-        run: |
-          chmod +x run_cmake_tests.sh
-          ./run_cmake_tests.sh
-
-      - name: Verify CMake build artifacts
-        run: |
-          ls -la build_cmake/
-          ls -la build_cmake/server
-          ls -la build_cmake/client
 
   # Multi-platform testing (Bazel)
   test-matrix-bazel:
     name: Test Matrix (Bazel)
     runs-on: ${{ matrix.os }}
-    needs: [build, test-bazel, test-cmake]
-    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success'
+    needs: build
+    if: always() && needs.build.result == 'success'
     strategy:
-      fail-fast: true  # Stop on first failure
-      max-parallel: 1  # Run sequentially to prevent race conditions
+      fail-fast: false  # Don't stop on first failure, let all matrix jobs run
+      max-parallel: 4  # Run all matrix jobs in parallel
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
         include:
@@ -217,11 +145,11 @@ jobs:
   test-matrix-cmake:
     name: Test Matrix (CMake)
     runs-on: ${{ matrix.os }}
-    needs: [build, test-bazel, test-cmake, test-matrix-bazel]
-    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success' && needs.test-matrix-bazel.result == 'success'
+    needs: build
+    if: always() && needs.build.result == 'success'
     strategy:
-      fail-fast: true  # Stop on first failure
-      max-parallel: 1  # Run sequentially to prevent race conditions
+      fail-fast: false  # Don't stop on first failure, let all matrix jobs run
+      max-parallel: 4  # Run all matrix jobs in parallel
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
     steps:
@@ -253,12 +181,36 @@ jobs:
           # Clean up isolated build directory to prevent conflicts
           rm -rf build_cmake_${{ matrix.os }}
 
+  # Check matrix test results
+  check-matrix-results:
+    name: Check Matrix Test Results
+    runs-on: ubuntu-latest
+    needs: [test-matrix-bazel, test-matrix-cmake]
+    if: always()
+    steps:
+      - name: Check matrix test results
+        run: |
+          echo "Bazel matrix test result: ${{ needs.test-matrix-bazel.result }}"
+          echo "CMake matrix test result: ${{ needs.test-matrix-cmake.result }}"
+          
+          if [[ "${{ needs.test-matrix-bazel.result }}" != "success" ]]; then
+            echo "❌ Bazel matrix tests failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.test-matrix-cmake.result }}" != "success" ]]; then
+            echo "❌ CMake matrix tests failed"
+            exit 1
+          fi
+          
+          echo "✅ Both matrix test suites passed!"
+
   # Security and quality checks
   security:
     name: Security & Quality
     runs-on: ubuntu-latest
-    needs: [build, test-bazel, test-cmake]
-    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success'
+    needs: [build, check-matrix-results]
+    if: always() && needs.build.result == 'success' && needs.check-matrix-results.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -304,8 +256,8 @@ jobs:
   performance:
     name: Performance Tests
     runs-on: ubuntu-latest
-    needs: [build, test-bazel, test-cmake, test-matrix-bazel, test-matrix-cmake]
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success' && needs.test-matrix-bazel.result == 'success' && needs.test-matrix-cmake.result == 'success'
+    needs: [build, check-matrix-results]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.check-matrix-results.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -367,16 +319,13 @@ jobs:
   validate:
     name: Final Validation
     runs-on: ubuntu-latest
-    needs: [build, test-bazel, test-cmake, test-matrix-bazel, test-matrix-cmake, security, docs]
+    needs: [build, check-matrix-results, security, docs]
     if: always()
     steps:
       - name: Check all jobs status
         run: |
           echo "Build job status: ${{ needs.build.result }}"
-          echo "Bazel test job status: ${{ needs.test-bazel.result }}"
-          echo "CMake test job status: ${{ needs.test-cmake.result }}"
-          echo "Bazel matrix test job status: ${{ needs.test-matrix-bazel.result }}"
-          echo "CMake matrix test job status: ${{ needs.test-matrix-cmake.result }}"
+          echo "Matrix test results check: ${{ needs.check-matrix-results.result }}"
           echo "Security job status: ${{ needs.security.result }}"
           echo "Docs job status: ${{ needs.docs.result }}"
           
@@ -386,23 +335,8 @@ jobs:
             exit 1
           fi
           
-          if [[ "${{ needs.test-bazel.result }}" != "success" ]]; then
-            echo "❌ Bazel tests failed - stopping pipeline"
-            exit 1
-          fi
-          
-          if [[ "${{ needs.test-cmake.result }}" != "success" ]]; then
-            echo "❌ CMake tests failed - stopping pipeline"
-            exit 1
-          fi
-          
-          if [[ "${{ needs.test-matrix-bazel.result }}" != "success" ]]; then
-            echo "❌ Bazel matrix tests failed - stopping pipeline"
-            exit 1
-          fi
-          
-          if [[ "${{ needs.test-matrix-cmake.result }}" != "success" ]]; then
-            echo "❌ CMake matrix tests failed - stopping pipeline"
+          if [[ "${{ needs.check-matrix-results.result }}" != "success" ]]; then
+            echo "❌ Matrix tests failed - stopping pipeline"
             exit 1
           fi
           
