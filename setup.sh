@@ -185,6 +185,8 @@ install_grpc() {
             print_info "Installing gRPC on Ubuntu/Debian..."
             sudo apt update
             sudo apt install -y libgrpc++-dev libgrpc-dev
+            # Try to install gRPC tools that include the plugin
+            sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || print_warning "gRPC tools not available, continuing..."
         else
             print_error "apt-get not found. Please install gRPC manually."
             return 1
