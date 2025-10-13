@@ -46,7 +46,7 @@ print_status "Running integration tests..."
 bazel test //test:integration_test --test_output=all
 
 print_status "Running all tests together..."
-bazel test //test:all_tests --test_output=all
+bazel test //test/cli:client_test //test/srv:server_test //test:integration_test --test_output=all
 
 print_status "Running tests with coverage..."
 bazel coverage //test/cli:client_test //test/srv:server_test //test:integration_test --combined_report=lcov

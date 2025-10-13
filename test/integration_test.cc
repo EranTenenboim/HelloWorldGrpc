@@ -36,9 +36,9 @@ class IntegrationTest : public ::testing::Test {
       server_ready_ = true;
       
       // Wait for server to be ready
-      std::unique_lock<std::mutex> lock(server_mutex_);
-      server_cv_.wait(lock, [this] { return server_ready_; });
-      
+      //std::unique_lock<std::mutex> lock(server_mutex_);
+      //server_cv_.wait(lock, [this] { return server_ready_; });
+      server_cv_.notify_all();
       server_->Wait();
     });
     
@@ -183,6 +183,7 @@ TEST_F(IntegrationTest, ServerRestart) {
   }
   
   // Start new server
+  server_ready_ = false;
   server_thread_ = std::thread([this]() {
     const std::string server_address("localhost:0");
     service_ = std::make_unique<GreeterServiceImpl>();
@@ -196,9 +197,9 @@ TEST_F(IntegrationTest, ServerRestart) {
     server_port_ = port;
     server_ready_ = true;
     
-    std::unique_lock<std::mutex> lock(server_mutex_);
-    server_cv_.wait(lock, [this] { return server_ready_; });
-    
+    // std::unique_lock<std::mutex> lock(server_mutex_);
+    // server_cv_.wait(lock, [this] { return server_ready_; });
+    server_cv_.notify_all();
     server_->Wait();
   });
   

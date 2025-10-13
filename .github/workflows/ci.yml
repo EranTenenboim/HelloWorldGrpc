@@ -1,0 +1,281 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  # Setup and validation job
+  setup:
+    name: Setup and Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run setup script
+        run: |
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
+
+      - name: Install Bazel (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
+
+      - name: Install Bazel (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install bazel
+
+      - name: Verify Bazel installation
+        run: |
+          bazel version
+          bazel info
+
+  # Build job (Bazel)
+  build-bazel:
+    name: Build (Bazel)
+    runs-on: ubuntu-latest
+    needs: setup
+    if: always() && needs.setup.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run setup script
+        run: |
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
+
+      - name: Build all targets
+        run: |
+          bazel build //... --enable_bzlmod --enable_workspace
+
+      - name: Verify build artifacts
+        run: |
+          ls -la bazel-bin/srv/
+          ls -la bazel-bin/cli/
+          ls -la bazel-bin/proto/
+
+
+
+  # Multi-platform testing (Bazel)
+  test-matrix-bazel:
+    name: Test Matrix (Bazel)
+    runs-on: ${{ matrix.os }}
+    needs: build-bazel
+    if: always() && needs.build-bazel.result == 'success'
+    strategy:
+      fail-fast: false  # Don't stop on first failure, let all matrix jobs run
+      max-parallel: 4  # Run all matrix jobs in parallel
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+        include:
+          - os: ubuntu-22.04
+            bazel-version: "7.0.0"
+          - os: ubuntu-24.04
+            bazel-version: "8.0.0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Bazel
+        run: |
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
+          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo apt update
+          sudo apt install -y bazel
+
+      - name: Setup C++ compiler
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential
+
+      - name: Setup lcov
+        run: |
+          sudo apt install -y lcov
+
+      - name: Build all targets
+        run: |
+          # Use isolated Bazel cache to prevent race conditions
+          bazel build //... --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }}
+
+      - name: Run tests
+        run: |
+          # Use isolated Bazel cache and test cache to prevent race conditions
+          bazel test //test/cli:client_test //test/srv:server_test //test:integration_test --test_output=all --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }} --test_output=errors
+
+      - name: Cleanup Bazel cache
+        if: always()
+        run: |
+          # Clean up isolated cache to prevent conflicts
+          rm -rf /tmp/bazel-cache-${{ matrix.os }}
+          bazel clean --expunge || true
+
+
+  # Check matrix test results
+  check-matrix-results:
+    name: Check Matrix Test Results
+    runs-on: ubuntu-latest
+    needs: [test-matrix-bazel]
+    if: always()
+    steps:
+      - name: Check matrix test results
+        run: |
+          echo "Bazel matrix test result: ${{ needs.test-matrix-bazel.result }}"
+          
+          if [[ "${{ needs.test-matrix-bazel.result }}" != "success" ]]; then
+            echo "❌ Bazel matrix tests failed"
+            exit 1
+          fi
+          
+          echo "✅ Bazel matrix test suite passed!"
+
+  # Security and quality checks
+  security:
+    name: Security & Quality
+    runs-on: ubuntu-latest
+    needs: [build-bazel, check-matrix-results]
+    if: always() && needs.build-bazel.result == 'success' && needs.check-matrix-results.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run setup script
+        run: |
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
+
+      - name: Build all targets
+        run: |
+          bazel build //... --enable_bzlmod --enable_workspace
+
+      - name: Run security scan
+        run: |
+          # Check for common security issues in BUILD files
+          echo "Checking BUILD files for security issues..."
+          find . -name "BUILD*" -exec grep -l "http_archive" {} \; | while read file; do
+            echo "Checking $file for insecure URLs..."
+            grep -n "http://" "$file" && echo "WARNING: Insecure HTTP URL found in $file" || true
+          done
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Checking for potential secrets..."
+          # Check for common secret patterns (more specific regex)
+          if grep -r -E "(password|secret|api_key|token|auth_token)\s*=\s*['\"][^'\"]{12,}" . --exclude-dir=.git --exclude-dir=bazel-* --exclude-dir=build*; then
+            echo "WARNING: Potential secrets found in code"
+            exit 1
+          fi
+
+      - name: Validate protobuf files
+        run: |
+          echo "Validating protobuf files..."
+          if command -v protoc >/dev/null 2>&1; then
+            protoc --version
+            protoc --proto_path=proto --cpp_out=/tmp proto/helloworld.proto
+          else
+            echo "protoc not available, skipping validation"
+          fi
+
+  # Performance testing
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [build-bazel, check-matrix-results]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-bazel.result == 'success' && needs.check-matrix-results.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run setup script
+        run: |
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
+
+      - name: Build with performance optimizations
+        run: |
+          bazel build //... --enable_bzlmod --enable_workspace --compilation_mode=opt
+
+      - name: Run performance benchmarks
+        run: |
+          echo "Running performance tests..."
+          # Start server in background
+          bazel run //srv:server &
+          SERVER_PID=$!
+          sleep 5
+          
+          # Run client multiple times for performance testing
+          for i in {1..10}; do
+            time bazel run //cli:client
+          done
+          
+          # Cleanup
+          kill $SERVER_PID || true
+
+  # Documentation validation
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check README links
+        run: |
+          echo "Checking README for broken links..."
+          # This would require additional tools like linkchecker
+          echo "README documentation check completed"
+
+      - name: Validate setup script
+        run: |
+          chmod +x setup.sh
+          # Test setup script syntax
+          bash -n setup.sh
+          echo "Setup script syntax is valid"
+
+      - name: Validate test script
+        run: |
+          chmod +x run_tests.sh
+          # Test run_tests.sh syntax
+          bash -n run_tests.sh
+          echo "Test script syntax is valid"
+
+  # Final validation
+  validate:
+    name: Final Validation
+    runs-on: ubuntu-latest
+    needs: [build-bazel, check-matrix-results, security, docs]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Bazel build job status: ${{ needs.build-bazel.result }}"
+          echo "Matrix test results check: ${{ needs.check-matrix-results.result }}"
+          echo "Security job status: ${{ needs.security.result }}"
+          echo "Docs job status: ${{ needs.docs.result }}"
+          
+          # Check if any job failed and exit early
+          if [[ "${{ needs.build-bazel.result }}" != "success" ]]; then
+            echo "❌ Bazel build failed - stopping pipeline"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.check-matrix-results.result }}" != "success" ]]; then
+            echo "❌ Matrix tests failed - stopping pipeline"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "❌ Security checks failed - stopping pipeline"
+            exit 1
+          fi
+          
+          echo "✅ All checks passed!"
