@@ -148,6 +148,11 @@ install_bazel() {
         # macOS
         if command_exists brew; then
             print_info "Installing Bazel on macOS via Homebrew..."
+            # Check if bazelisk is installed and unlink it first
+            if brew list bazelisk >/dev/null 2>&1; then
+                print_info "Unlinking bazelisk to avoid conflict..."
+                brew unlink bazelisk
+            fi
             brew install bazel
         else
             print_error "Homebrew not found. Please install Bazel manually or install Homebrew first."
