@@ -79,11 +79,30 @@ if(GRPC_CPP_PLUGIN)
     )
 else()
     message(WARNING "grpc_cpp_plugin not found, creating stub gRPC files")
-    # Create stub gRPC files to avoid build errors
+    # Create stub gRPC files with proper content to avoid build errors
     add_custom_command(
         OUTPUT ${GRPC_SRCS} ${GRPC_HDRS}
-        COMMAND ${CMAKE_COMMAND} -E echo "// gRPC files not generated - plugin not available"
-        COMMAND ${CMAKE_COMMAND} -E touch ${GRPC_SRCS} ${GRPC_HDRS}
+        COMMAND ${CMAKE_COMMAND} -E echo "// gRPC files not generated - plugin not available" > ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.cc
+        COMMAND ${CMAKE_COMMAND} -E echo "#ifndef HELLOWORLD_GRPC_PB_H" > ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "#define HELLOWORLD_GRPC_PB_H" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "#include \"helloworld.pb.h\"" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "#include <grpcpp/grpcpp.h>" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "namespace helloworld {" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "class Greeter {" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "public:" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "  class Service {" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "  public:" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "    virtual ~Service();" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "    virtual ::grpc::Status SayHello(::grpc::ServerContext* context, const ::helloworld::HelloRequest* request, ::helloworld::HelloReply* response);" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "  };" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "  class Stub {" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "  public:" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "    virtual ~Stub();" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "    virtual ::grpc::Status SayHello(::grpc::ClientContext* context, const ::helloworld::HelloRequest& request, ::helloworld::HelloReply* response);" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "  };" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "};" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "}" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
+        COMMAND ${CMAKE_COMMAND} -E echo "#endif" >> ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
         COMMENT "Creating stub gRPC files"
     )
