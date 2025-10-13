@@ -449,20 +449,6 @@ main() {
         missing_deps+=("bazel")
     fi
     
-    # Check CMake
-    print_info "Checking CMake..."
-    if command_exists cmake; then
-        local cmake_version=$(get_version "cmake" "--version")
-        if version_meets_requirement "$cmake_version" "$cmake_required"; then
-            print_success "CMake $cmake_version (meets requirement: $cmake_required+)"
-        else
-            print_warning "CMake $cmake_version (required: $cmake_required+)"
-            outdated_deps+=("cmake")
-        fi
-    else
-        print_error "CMake not found (required: $cmake_required+)"
-        missing_deps+=("cmake")
-    fi
     
     # Check protoc
     print_info "Checking protoc..."
@@ -603,9 +589,6 @@ main() {
                     "bazel")
                         install_bazel
                         ;;
-                    "cmake")
-                        install_cmake
-                        ;;
                     "protoc")
                         install_protoc
                         ;;
@@ -633,10 +616,6 @@ main() {
                     "bazel")
                         print_info "Updating Bazel..."
                         install_bazel
-                        ;;
-                    "cmake")
-                        print_info "Updating CMake..."
-                        install_cmake
                         ;;
                     "protoc")
                         print_info "Updating protoc..."
