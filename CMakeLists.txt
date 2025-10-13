@@ -19,14 +19,11 @@ find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GRPC REQUIRED grpc++)
 
-# Try to find gRPC using find_package, but don't fail if plugin is missing
-find_package(gRPC QUIET)
-if(NOT gRPC_FOUND)
-    message(STATUS "gRPC not found via find_package, using pkg-config results")
-    set(gRPC_FOUND TRUE)
-    set(gRPC_LIBRARIES ${GRPC_LIBRARIES})
-    set(gRPC_INCLUDE_DIRS ${GRPC_INCLUDE_DIRS})
-endif()
+# Don't use find_package(gRPC) as it requires the plugin
+# Use pkg-config results instead
+set(gRPC_FOUND TRUE)
+set(gRPC_LIBRARIES ${GRPC_LIBRARIES})
+set(gRPC_INCLUDE_DIRS ${GRPC_INCLUDE_DIRS})
 
 # Check if grpc_cpp_plugin exists, but don't fail if it doesn't
 find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
@@ -99,13 +96,8 @@ target_include_directories(helloworld_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 # Create gRPC library
 add_library(helloworld_grpc ${GRPC_SRCS} ${GRPC_HDRS})
-if(gRPC_FOUND AND TARGET gRPC::grpc++)
-    target_link_libraries(helloworld_grpc gRPC::grpc++ helloworld_proto)
-else()
-    target_link_libraries(helloworld_grpc ${GRPC_LIBRARIES} helloworld_proto)
-    target_include_directories(helloworld_grpc PUBLIC ${GRPC_INCLUDE_DIRS})
-endif()
-target_include_directories(helloworld_grpc PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(helloworld_grpc ${GRPC_LIBRARIES} helloworld_proto)
+target_include_directories(helloworld_grpc PUBLIC ${GRPC_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
 # Server library
 add_library(greeter_service

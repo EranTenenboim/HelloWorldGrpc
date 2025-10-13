@@ -89,9 +89,46 @@ version_meets_requirement() {
     fi
 }
 
+# Function to install basic dependencies
+install_basic_deps() {
+    print_info "Installing basic dependencies..."
+    
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command_exists apt-get; then
+            print_info "Installing basic dependencies on Ubuntu/Debian..."
+            # Try to install without sudo first, then with sudo if needed
+            if apt update && apt install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates 2>/dev/null; then
+                print_success "Basic dependencies installed successfully"
+            elif sudo apt update && sudo apt install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates; then
+                print_success "Basic dependencies installed successfully with sudo"
+            else
+                print_error "Failed to install basic dependencies. Please run: sudo apt update && sudo apt install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates"
+                return 1
+            fi
+        else
+            print_error "apt-get not found. Please install basic dependencies manually."
+            return 1
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        if command_exists brew; then
+            print_info "Installing basic dependencies on macOS via Homebrew..."
+            brew install curl wget gnupg
+        else
+            print_error "Homebrew not found. Please install basic dependencies manually."
+            return 1
+        fi
+    else
+        print_error "Unsupported OS: $OSTYPE. Please install basic dependencies manually."
+        return 1
+    fi
+}
+
 # Function to install Bazel
 install_bazel() {
     print_info "Installing Bazel..."
+    
+    # Install basic dependencies first
+    install_basic_deps
     
     # Detect OS
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -129,8 +166,15 @@ install_cmake() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if command_exists apt-get; then
             print_info "Installing CMake on Ubuntu/Debian..."
-            sudo apt update
-            sudo apt install -y cmake
+            # Try to install without sudo first, then with sudo if needed
+            if apt update && apt install -y cmake build-essential 2>/dev/null; then
+                print_success "CMake installed successfully"
+            elif sudo apt update && sudo apt install -y cmake build-essential; then
+                print_success "CMake installed successfully with sudo"
+            else
+                print_error "Failed to install CMake. Please run: sudo apt update && sudo apt install -y cmake build-essential"
+                return 1
+            fi
         else
             print_error "apt-get not found. Please install CMake manually."
             return 1
@@ -156,8 +200,15 @@ install_protoc() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if command_exists apt-get; then
             print_info "Installing protoc on Ubuntu/Debian..."
-            sudo apt update
-            sudo apt install -y protobuf-compiler libprotobuf-dev
+            # Try to install without sudo first, then with sudo if needed
+            if apt update && apt install -y protobuf-compiler libprotobuf-dev pkg-config 2>/dev/null; then
+                print_success "protoc installed successfully"
+            elif sudo apt update && sudo apt install -y protobuf-compiler libprotobuf-dev pkg-config; then
+                print_success "protoc installed successfully with sudo"
+            else
+                print_error "Failed to install protoc. Please run: sudo apt update && sudo apt install -y protobuf-compiler libprotobuf-dev pkg-config"
+                return 1
+            fi
         else
             print_error "apt-get not found. Please install protoc manually."
             return 1
@@ -165,7 +216,7 @@ install_protoc() {
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         if command_exists brew; then
             print_info "Installing protoc on macOS via Homebrew..."
-            brew install protobuf
+            brew install protobuf pkg-config
         else
             print_error "Homebrew not found. Please install protoc manually or install Homebrew first."
             return 1
@@ -183,10 +234,19 @@ install_grpc() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if command_exists apt-get; then
             print_info "Installing gRPC on Ubuntu/Debian..."
-            sudo apt update
-            sudo apt install -y libgrpc++-dev libgrpc-dev
-            # Try to install gRPC tools that include the plugin
-            sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || print_warning "gRPC tools not available, continuing..."
+            # Try to install without sudo first, then with sudo if needed
+            if apt update && apt install -y libgrpc++-dev libgrpc-dev 2>/dev/null; then
+                print_success "gRPC installed successfully"
+                # Try to install gRPC tools that include the plugin
+                apt install -y grpc-dev-tools || apt install -y grpc-tools || print_warning "gRPC tools not available, continuing..."
+            elif sudo apt update && sudo apt install -y libgrpc++-dev libgrpc-dev; then
+                print_success "gRPC installed successfully with sudo"
+                # Try to install gRPC tools that include the plugin
+                sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || print_warning "gRPC tools not available, continuing..."
+            else
+                print_error "Failed to install gRPC. Please run: sudo apt update && sudo apt install -y libgrpc++-dev libgrpc-dev"
+                return 1
+            fi
         else
             print_error "apt-get not found. Please install gRPC manually."
             return 1
@@ -353,6 +413,26 @@ main() {
     
     print_info "Checking prerequisites..."
     echo ""
+    
+    # Check basic dependencies first
+    print_info "Checking basic dependencies..."
+    local basic_deps_missing=false
+    
+    if ! command_exists curl; then
+        print_error "curl not found (required for downloads)"
+        basic_deps_missing=true
+    fi
+    
+    if ! command_exists gpg; then
+        print_error "gpg not found (required for package verification)"
+        basic_deps_missing=true
+    fi
+    
+    if [[ "$basic_deps_missing" == true ]]; then
+        print_info "Installing basic dependencies first..."
+        install_basic_deps
+        echo ""
+    fi
     
     # Check Bazel
     print_info "Checking Bazel..."
