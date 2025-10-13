@@ -15,18 +15,17 @@ find_package(PkgConfig REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
 
-# Find gRPC (with fallback for missing plugin)
+# Find gRPC using pkg-config as primary method
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GRPC REQUIRED grpc++)
+
+# Also try to find gRPC using find_package as fallback
 find_package(gRPC QUIET)
 if(NOT gRPC_FOUND)
-    message(WARNING "gRPC not found, trying alternative approach...")
-    # Try to find gRPC components manually
-    find_library(GRPC_LIBRARY grpc++)
-    find_library(GRPC_UNSECURE_LIBRARY grpc++_unsecure)
-    if(GRPC_LIBRARY)
-        message(STATUS "Found gRPC library: ${GRPC_LIBRARY}")
-    else()
-        message(FATAL_ERROR "gRPC not found. Please install libgrpc++-dev")
-    endif()
+    message(STATUS "gRPC not found via find_package, using pkg-config results")
+    set(gRPC_FOUND TRUE)
+    set(gRPC_LIBRARIES ${GRPC_LIBRARIES})
+    set(gRPC_INCLUDE_DIRS ${GRPC_INCLUDE_DIRS})
 endif()
 
 # Check if grpc_cpp_plugin exists
@@ -81,10 +80,17 @@ if(GRPC_CPP_PLUGIN)
         COMMENT "Generating gRPC files"
     )
 else()
-    message(WARNING "grpc_cpp_plugin not found, skipping gRPC generation")
-    # Create empty files to avoid build errors
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.cc "// gRPC files not generated\n")
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h "// gRPC files not generated\n")
+    message(WARNING "grpc_cpp_plugin not found, trying to generate gRPC files without plugin")
+    # Try to generate gRPC files without explicit plugin
+    add_custom_command(
+        OUTPUT ${GRPC_SRCS} ${GRPC_HDRS}
+        COMMAND protoc
+        ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
+             --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/proto
+             ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/proto/helloworld.proto
+        COMMENT "Generating gRPC files (without explicit plugin)"
+    )
 endif()
 
 # Create protobuf library
@@ -94,7 +100,12 @@ target_include_directories(helloworld_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 # Create gRPC library
 add_library(helloworld_grpc ${GRPC_SRCS} ${GRPC_HDRS})
-target_link_libraries(helloworld_grpc gRPC::grpc++ helloworld_proto)
+if(gRPC_FOUND AND TARGET gRPC::grpc++)
+    target_link_libraries(helloworld_grpc gRPC::grpc++ helloworld_proto)
+else()
+    target_link_libraries(helloworld_grpc ${GRPC_LIBRARIES} helloworld_proto)
+    target_include_directories(helloworld_grpc PUBLIC ${GRPC_INCLUDE_DIRS})
+endif()
 target_include_directories(helloworld_grpc PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 # Server library

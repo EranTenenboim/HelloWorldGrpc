@@ -16,16 +16,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Run setup script
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake
-          sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev pkg-config
-          sudo apt install -y lcov
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Install Bazel (Ubuntu)
         if: runner.os == 'Linux'
@@ -55,21 +49,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Run setup script
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake
-          sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev pkg-config
-          sudo apt install -y lcov
-          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
-          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-          sudo apt update
-          sudo apt install -y bazel
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Build all targets
         run: |
@@ -86,25 +69,15 @@ jobs:
     name: Test Suite (Bazel)
     runs-on: ubuntu-latest
     needs: build
+    if: always() && needs.build.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Run setup script
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake
-          sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev pkg-config
-          sudo apt install -y lcov
-          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
-          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-          sudo apt update
-          sudo apt install -y bazel
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Build all targets
         run: |
@@ -142,20 +115,16 @@ jobs:
   test-cmake:
     name: Test Suite (CMake)
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, test-bazel]
+    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install CMake dependencies
+      - name: Run setup script
         run: |
-          sudo apt update
-          sudo apt install -y cmake build-essential
-          sudo apt install -y libprotobuf-dev protobuf-compiler
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Build and test with CMake
         run: |
@@ -172,10 +141,11 @@ jobs:
   test-matrix-bazel:
     name: Test Matrix (Bazel)
     runs-on: ${{ matrix.os }}
-    needs: build
+    needs: [build, test-bazel, test-cmake]
+    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success'
     strategy:
-      fail-fast: false
-      max-parallel: 2  # Limit parallel execution to prevent race conditions
+      fail-fast: true  # Stop on first failure
+      max-parallel: 1  # Run sequentially to prevent race conditions
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
         include:
@@ -247,31 +217,28 @@ jobs:
   test-matrix-cmake:
     name: Test Matrix (CMake)
     runs-on: ${{ matrix.os }}
-    needs: build
+    needs: [build, test-bazel, test-cmake, test-matrix-bazel]
+    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success' && needs.test-matrix-bazel.result == 'success'
     strategy:
-      fail-fast: false
-      max-parallel: 2  # Limit parallel execution to prevent race conditions
+      fail-fast: true  # Stop on first failure
+      max-parallel: 1  # Run sequentially to prevent race conditions
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-12, macos-13]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup CMake dependencies (Ubuntu)
+      - name: Run setup script (Ubuntu)
         if: runner.os == 'Linux'
         run: |
-          sudo apt update
-          sudo apt install -y cmake build-essential
-          sudo apt install -y libprotobuf-dev protobuf-compiler
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
-      - name: Setup CMake dependencies (macOS)
+      - name: Run setup script (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install cmake protobuf grpc googletest
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Build and test with CMake
         run: |
@@ -290,26 +257,16 @@ jobs:
   security:
     name: Security & Quality
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, test-bazel, test-cmake]
+    if: always() && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Run setup script
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake
-          sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev pkg-config
-          sudo apt install -y lcov
-          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
-          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-          sudo apt update
-          sudo apt install -y bazel
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Build all targets
         run: |
@@ -347,27 +304,16 @@ jobs:
   performance:
     name: Performance Tests
     runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, test-bazel, test-cmake, test-matrix-bazel, test-matrix-cmake]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.test-bazel.result == 'success' && needs.test-cmake.result == 'success' && needs.test-matrix-bazel.result == 'success' && needs.test-matrix-cmake.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Run setup script
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake
-          sudo apt install -y protobuf-compiler libprotobuf-dev
-          sudo apt install -y libgrpc++-dev libgrpc-dev libgtest-dev build-essential
-          # Try to install gRPC tools if available
-          sudo apt install -y grpc-dev-tools || sudo apt install -y grpc-tools || echo "gRPC tools not available, continuing..."
-          sudo apt install -y libgtest-dev pkg-config
-          sudo apt install -y lcov
-          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
-          sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-          sudo apt update
-          sudo apt install -y bazel
+          chmod +x setup.sh
+          echo "y" | ./setup.sh
 
       - name: Build with performance optimizations
         run: |
@@ -434,33 +380,34 @@ jobs:
           echo "Security job status: ${{ needs.security.result }}"
           echo "Docs job status: ${{ needs.docs.result }}"
           
+          # Check if any job failed and exit early
           if [[ "${{ needs.build.result }}" != "success" ]]; then
-            echo "❌ Build failed"
+            echo "❌ Build failed - stopping pipeline"
             exit 1
           fi
           
           if [[ "${{ needs.test-bazel.result }}" != "success" ]]; then
-            echo "❌ Bazel tests failed"
+            echo "❌ Bazel tests failed - stopping pipeline"
             exit 1
           fi
           
           if [[ "${{ needs.test-cmake.result }}" != "success" ]]; then
-            echo "❌ CMake tests failed"
+            echo "❌ CMake tests failed - stopping pipeline"
             exit 1
           fi
           
           if [[ "${{ needs.test-matrix-bazel.result }}" != "success" ]]; then
-            echo "❌ Bazel matrix tests failed"
+            echo "❌ Bazel matrix tests failed - stopping pipeline"
             exit 1
           fi
           
           if [[ "${{ needs.test-matrix-cmake.result }}" != "success" ]]; then
-            echo "❌ CMake matrix tests failed"
+            echo "❌ CMake matrix tests failed - stopping pipeline"
             exit 1
           fi
           
           if [[ "${{ needs.security.result }}" != "success" ]]; then
-            echo "❌ Security checks failed"
+            echo "❌ Security checks failed - stopping pipeline"
             exit 1
           fi
           
