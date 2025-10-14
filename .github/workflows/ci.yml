@@ -53,9 +53,17 @@ jobs:
           chmod +x setup.sh
           echo "y" | ./setup.sh
 
+      - name: Cache Bazel disk cache
+        uses: actions/cache@v4
+        with:
+          path: .bazel-cache
+          key: bazel-cache-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'proto/BUILD.bazel', 'srv/BUILD', 'cli/BUILD', 'test/**/BUILD') }}
+          restore-keys: |
+            bazel-cache-${{ runner.os }}-
+
       - name: Build all targets
         run: |
-          bazel build //... --enable_bzlmod --enable_workspace
+          bazel build //... --enable_bzlmod --enable_workspace --disk_cache=${{ github.workspace }}/.bazel-cache
 
       - name: Verify build artifacts
         run: |
@@ -102,22 +110,22 @@ jobs:
         run: |
           sudo apt install -y lcov
 
+      - name: Cache Bazel disk cache
+        uses: actions/cache@v4
+        with:
+          path: .bazel-cache
+          key: bazel-cache-${{ runner.os }}-${{ matrix.os }}-${{ hashFiles('MODULE.bazel', 'proto/BUILD.bazel', 'srv/BUILD', 'cli/BUILD', 'test/**/BUILD') }}
+          restore-keys: |
+            bazel-cache-${{ runner.os }}-${{ matrix.os }}-
+
       - name: Build all targets
         run: |
-          # Use isolated Bazel cache to prevent race conditions
-          bazel build //... --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }}
+          bazel build //... --enable_bzlmod --enable_workspace --disk_cache=${{ github.workspace }}/.bazel-cache
 
       - name: Run tests
         run: |
-          # Use isolated Bazel cache and test cache to prevent race conditions
-          bazel test //test/cli:client_test //test/srv:server_test //test:integration_test --test_output=all --enable_bzlmod --enable_workspace --disk_cache=/tmp/bazel-cache-${{ matrix.os }} --test_output=errors
+          bazel test //test/cli:client_test //test/srv:server_test //test:integration_test --test_output=all --enable_bzlmod --enable_workspace --disk_cache=${{ github.workspace }}/.bazel-cache --test_output=errors
 
-      - name: Cleanup Bazel cache
-        if: always()
-        run: |
-          # Clean up isolated cache to prevent conflicts
-          rm -rf /tmp/bazel-cache-${{ matrix.os }}
-          bazel clean --expunge || true
 
 
   # Check matrix test results
