@@ -1,6 +1,6 @@
 # HelloWorldGrpc
 
-A simple gRPC Hello World example in C++ using Bazel build system with explicit target definitions and comprehensive testing.
+A simple gRPC Hello World example in C++ using the Bazel build system with explicit target definitions and comprehensive testing.
 
 ## Features
 
@@ -15,7 +15,6 @@ A simple gRPC Hello World example in C++ using Bazel build system with explicit 
 ```
 HelloWorldGrpc/
 ├── MODULE.bazel         # Bzlmod module definition
-├── WORKSPACE            # Legacy Bazel workspace (for Google Test)
 ├── proto/               # Protocol buffer definitions
 │   ├── BUILD.bazel      # Proto build configuration
 │   └── helloworld.proto
@@ -44,14 +43,15 @@ HelloWorldGrpc/
 
 ## Prerequisites
 
-- **Bazel**: Install Bazel (version 6.0+ recommended)
-- **C++ Compiler**: GCC 9.0+ or Clang with C++17 support
+- **OS**: Ubuntu 22.04+ (Linux-only)
+- **Bazel**: 7.0+ (8.x supported)
+- **C++ Compiler**: GCC 9.0+ with C++17 support
 
-**Note**: All gRPC and Protocol Buffer dependencies are now managed automatically by Bazel through the `MODULE.bazel` file. No manual installation of system libraries is required!
+All gRPC and Protocol Buffer dependencies are managed automatically by Bazel through the `MODULE.bazel` file. No manual installation of system libraries is required.
 
 ## Dependencies
 
-### Automatic Dependency Management
+### Automatic dependency management
 
 All dependencies are now managed automatically by Bazel through the `MODULE.bazel` file. This ensures:
 
@@ -60,7 +60,7 @@ All dependencies are now managed automatically by Bazel through the `MODULE.baze
 - ✅ **Automatic version resolution**
 - ✅ **Cross-platform compatibility**
 
-### Bazel Dependencies (Auto-managed)
+### Bazel dependencies (auto-managed)
 
 | Module | Version | Description |
 |--------|---------|-------------|
@@ -70,7 +70,7 @@ All dependencies are now managed automatically by Bazel through the `MODULE.baze
 | **grpc** | 1.74.0 | gRPC C++ library |
 | **gtest** | 1.14.0 | Google Test framework (via WORKSPACE) |
 
-### Automatic Installation (Recommended)
+### Automatic installation (recommended)
 
 ```bash
 # Run the setup script - it will check and install all dependencies automatically
@@ -78,12 +78,11 @@ All dependencies are now managed automatically by Bazel through the `MODULE.baze
 ```
 
 The setup script will:
-- ✅ **Check all prerequisites** (Bazel, CMake, protoc, gRPC, C++ compiler, etc.)
-- ✅ **Install missing dependencies** automatically
-- ✅ **Update outdated dependencies** if needed
-- ✅ **Provide clear instructions** for manual installation if needed
+- Check prerequisites (Bazel, protoc, pkg-config, C++ compiler)
+- Install missing dependencies automatically (Ubuntu 22.04+)
+- Provide clear instructions if manual steps are needed
 
-### Manual Installation (Alternative)
+### Manual installation (alternative)
 
 If you prefer manual installation:
 
@@ -94,11 +93,11 @@ sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
 sudo apt update && sudo apt install bazel
 
-# Install CMake and build tools
-sudo apt install cmake build-essential
+# Install build tools
+sudo apt install -y build-essential
 
-# Install protobuf and gRPC
-sudo apt install protobuf-compiler libprotobuf-dev libgrpc++-dev libgrpc-dev
+# Install protobuf tools (headers are vendored via Bazel)
+sudo apt install -y protobuf-compiler pkg-config
 
 # Install Google Test (optional, for tests)
 sudo apt install libgtest-dev
@@ -107,12 +106,12 @@ sudo apt install libgtest-dev
 sudo apt install lcov
 ```
 
-### Version Compatibility
+### Version compatibility
 
 | Bazel | Protobuf | gRPC | C++ Standard |
 |-------|----------|------|--------------|
-| 6.0+  | 32.0     | 1.74.0| C++17        |
 | 7.0+  | 32.0     | 1.74.0| C++17        |
+| 8.0+  | 32.0     | 1.74.0| C++17        |
 
 ## Build
 
@@ -175,20 +174,18 @@ bazel run //cli:client -- localhost:50051 "YourName"
 bazel test //test:all_tests --test_output=all
 ```
 
-### CI/CD Pipeline
+### CI/CD pipeline
 
-This project uses GitHub Actions for continuous integration and deployment:
+This project uses GitHub Actions for CI only on pull requests targeting `main` (manual runs supported):
 
-- **Automatic Testing**: Runs on every push and pull request
-- **Multi-Platform**: Tests on Ubuntu 20.04/22.04 and macOS 12/13
-- **Quality Gates**: Prevents merging broken code to main branch
-- **Security Scanning**: Automated security and quality checks
+- Linux-only matrix: Ubuntu 22.04 and 24.04
+- Security and documentation checks included
 
 #### Pipeline Stages:
 1. **Setup & Validate**: Prerequisites and environment validation
 2. **Build**: Compiles all targets with Bazel
 3. **Test Suite**: Unit tests, integration tests, and coverage
-4. **Test Matrix**: Cross-platform testing
+4. **Test matrix**: Ubuntu 22.04/24.04
 5. **Security & Quality**: Security scans and code quality
 6. **Performance**: Performance benchmarks (main branch only)
 7. **Documentation**: Validates README and scripts
@@ -251,17 +248,9 @@ bazel run //srv:server
 bazel run //cli:client
 ```
 
-### Alternative: CMake Build
+### Alternative: CMake build
 
-```bash
-# After running ./setup.sh, you can also use CMake
-./run_cmake_tests.sh
-
-# Or manually:
-mkdir build_cmake && cd build_cmake
-cmake ..
-make
-```
+Removed. The project is Bazel-only.
 
 ### Contributing
 
@@ -488,14 +477,14 @@ gdb bazel-bin/cli/client
 
 ### System Requirements
 
-#### Minimum Requirements
-- **OS**: Linux (Ubuntu 18.04+), macOS (10.15+), Windows 10+
+#### Minimum requirements
+- **OS**: Ubuntu 22.04+
 - **RAM**: 4GB minimum, 8GB recommended
 - **Disk**: 2GB free space for dependencies
 - **Network**: Internet connection for dependency downloads
 
-#### Recommended Development Environment
-- **OS**: Ubuntu 20.04+ or macOS 11+
+#### Recommended development environment
+- **OS**: Ubuntu 22.04/24.04
 - **RAM**: 16GB
 - **CPU**: 4+ cores
 - **Disk**: 10GB+ free space
