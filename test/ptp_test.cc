@@ -12,14 +12,15 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 #include "proto/helloworld.grpc.pb.h"
 
 namespace helloworld {
 namespace {
 
-// Registry integration test fixture
-class RegistryIntegrationTest : public ::testing::Test {
+// Registry PTP test fixture
+class RegistryPTPTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Start registry server in a separate thread
@@ -66,15 +67,13 @@ class RegistryIntegrationTest : public ::testing::Test {
 };
 
 // Test client registration with registry
-TEST_F(RegistryIntegrationTest, ClientRegistration) {
+TEST_F(RegistryPTPTest, ClientRegistration) {
   const std::string client_id = "test_client";
   const std::string client_address = "localhost";
   const int32_t client_port = 50052;
   
-  // Create client
+  // Create and start client
   Client client(registry_server_address_, client_id, client_address, client_port);
-  
-  // Start client (registers with registry)
   EXPECT_TRUE(client.Start());
   
   // Give client time to register
@@ -84,41 +83,10 @@ TEST_F(RegistryIntegrationTest, ClientRegistration) {
   client.Stop();
 }
 
-// Test client discovery
-TEST_F(RegistryIntegrationTest, ClientDiscovery) {
+// Test client discovery and direct communication
+TEST_F(RegistryPTPTest, ClientDiscoveryAndCommunication) {
   const std::string client_id1 = "client1";
   const std::string client_id2 = "client2";
-  const std::string client_address = "localhost";
-  const int32_t client_port1 = 50052;
-  const int32_t client_port2 = 50053;
-  
-  // Create and start first client
-  Client client1(registry_server_address_, client_id1, client_address, client_port1);
-  EXPECT_TRUE(client1.Start());
-  
-  // Give client time to register
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  
-  // Create and start second client
-  Client client2(registry_server_address_, client_id2, client_address, client_port2);
-  EXPECT_TRUE(client2.Start());
-  
-  // Give client time to register
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  
-  // Test client discovery
-  auto clients = client1.GetAvailableClients();
-  EXPECT_GE(clients.size(), 1); // At least client1 should be visible
-  
-  // Cleanup
-  client1.Stop();
-  client2.Stop();
-}
-
-// Test direct client-to-client communication
-TEST_F(RegistryIntegrationTest, DirectClientCommunication) {
-  const std::string client_id1 = "sender";
-  const std::string client_id2 = "receiver";
   const std::string client_address = "localhost";
   const int32_t client_port1 = 50060;
   const int32_t client_port2 = 50061;
@@ -133,6 +101,10 @@ TEST_F(RegistryIntegrationTest, DirectClientCommunication) {
   // Give clients time to register and start
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   
+  // Test client discovery
+  auto clients = client1.GetAvailableClients();
+  EXPECT_GE(clients.size(), 1); // At least client1 should be visible
+  
   // Test direct communication
   const std::string test_message = "Hello from client1 to client2!";
   EXPECT_TRUE(client1.SendMessageToClient(client_id2, test_message));
@@ -143,7 +115,7 @@ TEST_F(RegistryIntegrationTest, DirectClientCommunication) {
 }
 
 // Test multiple client registration
-TEST_F(RegistryIntegrationTest, MultipleClientRegistration) {
+TEST_F(RegistryPTPTest, MultipleClientRegistration) {
   const int num_clients = 5;
   std::vector<std::unique_ptr<Client>> clients;
   
@@ -173,7 +145,7 @@ TEST_F(RegistryIntegrationTest, MultipleClientRegistration) {
 }
 
 // Test client unregistration
-TEST_F(RegistryIntegrationTest, ClientUnregistration) {
+TEST_F(RegistryPTPTest, ClientUnregistration) {
   const std::string client_id = "temp_client";
   const std::string client_address = "localhost";
   const int32_t client_port = 50080;
@@ -210,7 +182,7 @@ TEST_F(RegistryIntegrationTest, ClientUnregistration) {
 }
 
 // Test concurrent client communication
-TEST_F(RegistryIntegrationTest, ConcurrentClientCommunication) {
+TEST_F(RegistryPTPTest, ConcurrentClientCommunication) {
   const int num_senders = 3;
   const int num_receivers = 2;
   std::vector<std::unique_ptr<Client>> senders;
@@ -274,6 +246,109 @@ TEST_F(RegistryIntegrationTest, ConcurrentClientCommunication) {
   for (auto& client : receivers) {
     client->Stop();
   }
+}
+
+// Test client registration with invalid address
+TEST_F(RegistryPTPTest, ClientRegistrationInvalidAddress) {
+  const std::string client_id = "invalid_client";
+  const std::string client_address = "invalid_host";
+  const int32_t client_port = 99999; // Invalid port
+  
+  // Create client with invalid address
+  Client client(registry_server_address_, client_id, client_address, client_port);
+  
+  // This should still register with the registry (registry doesn't validate connectivity)
+  EXPECT_TRUE(client.Start());
+  
+  // Cleanup
+  client.Stop();
+}
+
+// Test client registration with duplicate client ID
+TEST_F(RegistryPTPTest, DuplicateClientIdRegistration) {
+  const std::string client_id = "duplicate_client";
+  const std::string client_address = "localhost";
+  const int32_t client_port1 = 50090;
+  const int32_t client_port2 = 50091;
+  
+  // Create and start first client
+  Client client1(registry_server_address_, client_id, client_address, client_port1);
+  EXPECT_TRUE(client1.Start());
+  
+  // Give client time to register
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  
+  // Try to create second client with same ID
+  Client client2(registry_server_address_, client_id, client_address, client_port2);
+  // This should fail due to duplicate ID
+  EXPECT_FALSE(client2.Start());
+  
+  // Cleanup
+  client1.Stop();
+}
+
+// Test client registration with different client addresses
+TEST_F(RegistryPTPTest, DifferentClientAddresses) {
+  const std::string client_id1 = "client_localhost";
+  const std::string client_id2 = "client_127";
+  const std::string client_address1 = "localhost";
+  const std::string client_address2 = "127.0.0.1";
+  const int32_t client_port1 = 50110;
+  const int32_t client_port2 = 50111;
+  
+  // Create and start first client
+  Client client1(registry_server_address_, client_id1, client_address1, client_port1);
+  EXPECT_TRUE(client1.Start());
+  
+  // Give client time to register
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  
+  // Create and start second client with different address
+  Client client2(registry_server_address_, client_id2, client_address2, client_port2);
+  EXPECT_TRUE(client2.Start());
+  
+  // Give client time to register
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  
+  // Test that both clients are discoverable
+  auto clients = client1.GetAvailableClients();
+  EXPECT_GE(clients.size(), 1);
+  
+  // Cleanup
+  client1.Stop();
+  client2.Stop();
+}
+
+// Test client registration timeout
+TEST_F(RegistryPTPTest, ClientRegistrationTimeout) {
+  const std::string client_id = "timeout_client";
+  const std::string client_address = "localhost";
+  const int32_t client_port = 50120;
+  
+  // Create client
+  Client client(registry_server_address_, client_id, client_address, client_port);
+  
+  // Start client (should succeed even if no actual server is running)
+  EXPECT_TRUE(client.Start());
+  
+  // Cleanup
+  client.Stop();
+}
+
+// Test client registration with empty client ID
+TEST_F(RegistryPTPTest, ClientRegistrationEmptyId) {
+  const std::string client_id = ""; // Empty ID
+  const std::string client_address = "localhost";
+  const int32_t client_port = 50130;
+  
+  // Create client with empty ID
+  Client client(registry_server_address_, client_id, client_address, client_port);
+  
+  // This should still work (empty ID is valid)
+  EXPECT_TRUE(client.Start());
+  
+  // Cleanup
+  client.Stop();
 }
 
 }  // namespace

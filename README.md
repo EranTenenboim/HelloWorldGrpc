@@ -1,14 +1,16 @@
 # HelloWorldGrpc
 
-A simple gRPC Hello World example in C++ using the Bazel build system with explicit target definitions and comprehensive testing.
+A client registry and discovery system in C++ using gRPC and Bazel. Clients can register with a central registry server and discover other clients for direct peer-to-peer communication.
 
 ## Features
 
-- **Explicit Build Configuration**: Uses explicit target definitions in BUILD files for better control
-- **Modular Structure**: Separate BUILD files for each component (proto, server, client, tests)
+- **Client Registry System**: Central registry server for client discovery
+- **Direct Client Communication**: Clients connect directly to each other for messaging
+- **Interactive Command Interface**: User-friendly command-line interface for client operations
+- **gRPC + Protobuf**: All communication uses gRPC and Protocol Buffers
 - **Modern Bazel Setup**: Uses Bzlmod (MODULE.bazel) for dependency management
-- **Comprehensive Testing**: Unit tests, integration tests, and test coverage
-- **Clean Project Structure**: Organized with separate directories for protocol definitions, server, client, and tests
+- **Comprehensive Testing**: Unit tests, integration tests, and registry functionality tests
+- **Thread-Safe**: Concurrent client management with proper synchronization
 
 ## Project Structure
 
@@ -39,6 +41,25 @@ HelloWorldGrpc/
 │       └── server_test.cc
 ├── run_tests.sh         # Test runner script
 └── README.md
+```
+
+## Architecture
+
+This system implements a **client registry and discovery pattern**:
+
+1. **Registry Server**: Central server that maintains a registry of connected clients
+2. **Client Registration**: Clients register with the server providing their listening address/port
+3. **Client Discovery**: Clients query the server to get other clients' addresses
+4. **Direct Communication**: Clients connect directly to each other for messaging
+5. **Interactive Interface**: Users can send messages using simple commands
+
+### Communication Flow:
+```
+Client A → Registry Server: "Register me at localhost:50052"
+Client B → Registry Server: "Register me at localhost:50053"
+Client A → Registry Server: "Where is Client B?"
+Registry Server → Client A: "Client B is at localhost:50053"
+Client A → Client B: "Hello from A!" (direct connection)
 ```
 
 ## Prerequisites
@@ -136,30 +157,121 @@ Bazel will automatically generate the necessary protobuf and gRPC files during b
 
 ## Run
 
-### Start the Server
+### Start the Registry Server
 
 ```bash
-# Run server in foreground
+# Run registry server in foreground
 bazel run //srv:server
 
 # Or run the binary directly
 ./bazel-bin/srv/server
 ```
 
-### Run the Client
+### Run Clients
 
 ```bash
-# Run client (default: connects to localhost:50051)
-bazel run //cli:client
+# Start client with interactive interface
+bazel run //cli:client -- -i client1
 
-# Run client with custom server address
-bazel run //cli:client -- localhost:50051
-
-# Run client with custom server and user name
-bazel run //cli:client -- localhost:50051 "YourName"
+# Start client with custom settings
+bazel run //cli:client -- -i client1 -s localhost:50051 -a localhost -p 50052
 
 # Or run the binary directly
-./bazel-bin/cli/client
+./bazel-bin/cli/client -i client1
+```
+
+### Interactive Commands
+
+Once a client is running, you can use these commands:
+
+```bash
+client1> send client2 Hello, how are you?
+client1> list
+client1> help
+client1> quit
+```
+
+**Available Commands:**
+- `send <destination> <message>` - Send message to another client
+- `list` - List all available clients
+- `help` - Show help information
+- `quit` or `exit` - Exit the client
+
+## Complete Example
+
+Here's a complete example of the system in action:
+
+### Terminal 1: Start Registry Server
+```bash
+$ bazel run //srv:server
+Starting Client Registry System...
+Client Registry Server listening on localhost:50051
+```
+
+### Terminal 2: Start First Client
+```bash
+$ bazel run //cli:client -- -i alice
+Starting Client Registry System...
+Registry Server: localhost:50051
+Client ID: alice
+Client Address: localhost:50052
+Client started successfully
+
+Client is running and listening for messages...
+Available commands:
+  send <destination> <message>  - Send message to another client
+  list                         - List available clients
+  help                         - Show this help
+  quit                         - Exit client
+Type commands and press Enter:
+
+alice> list
+Available clients:
+  alice at localhost:50052 (online: yes)
+```
+
+### Terminal 3: Start Second Client
+```bash
+$ bazel run //cli:client -- -i bob
+Starting Client Registry System...
+Registry Server: localhost:50051
+Client ID: bob
+Client Address: localhost:50053
+Client started successfully
+
+Client is running and listening for messages...
+Available commands:
+  send <destination> <message>  - Send message to another client
+  list                         - List available clients
+  help                         - Show this help
+  quit                         - Exit client
+Type commands and press Enter:
+
+bob> list
+Available clients:
+  alice at localhost:50052 (online: yes)
+  bob at localhost:50053 (online: yes)
+```
+
+### Back to Terminal 2: Send Message
+```bash
+alice> send bob Hello Bob, how are you?
+Sending message to bob: Hello Bob, how are you?
+Message sent successfully!
+```
+
+### Back to Terminal 3: Receive Message
+```bash
+bob> # Message received from alice: "Hello Bob, how are you!"
+```
+
+### Clean Exit
+```bash
+alice> quit
+Exiting...
+
+bob> quit
+Exiting...
 ```
 
 ## Testing
@@ -209,9 +321,30 @@ bazel test //test/cli:client_test --test_output=all
 # Run server unit tests  
 bazel test //test/srv:server_test --test_output=all
 
-# Run integration tests
+# Run registry integration tests
 bazel test //test:integration_test --test_output=all
+
+# Run registry PTP tests
+bazel test //test:ptp_test --test_output=all
 ```
+
+### Registry-Specific Tests
+
+The test suite includes comprehensive tests for the registry system:
+
+- **Client Registration**: Tests client registration with the registry server ✅
+- **Client Discovery**: Tests client discovery and listing functionality ✅
+- **Direct Communication**: Tests direct client-to-client messaging ✅
+- **Concurrent Operations**: Tests multiple clients registering and communicating simultaneously ✅
+- **Client Unregistration**: Tests proper cleanup when clients disconnect ✅
+- **Error Handling**: Tests various error scenarios and edge cases ✅
+
+**Test Results**: All 6 integration tests pass successfully, demonstrating:
+- Client registration and unregistration
+- Multi-client discovery and listing
+- Direct peer-to-peer messaging
+- Concurrent client operations
+- Proper cleanup and resource management
 
 ### Test Coverage
 
