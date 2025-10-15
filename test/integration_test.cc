@@ -11,8 +11,22 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <atomic>
+#include <vector>
+#include <random>
+#include <chrono>
+#include <iostream>
 
 #include "proto/helloworld.grpc.pb.h"
+
+
+// --- Load test parameter struct and test class must be outside the helloworld namespace ---
+struct LoadTestParams {
+  int num_threads;
+  int duration_seconds;
+};
+
+class LoadTest;
 
 namespace helloworld {
 namespace {
@@ -168,6 +182,65 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values("Alice", "Bob", "Charlie", "David", "Eve", "Frank", 
                       "John Doe", "Jane Smith", "Test User", "世界", "Тест"));
 
+
+class LoadTest : public IntegrationTest, public ::testing::WithParamInterface<LoadTestParams> {};
+
+TEST_P(LoadTest, ServerStressTest) {
+  const int num_threads = GetParam().num_threads;
+  const int duration_seconds = GetParam().duration_seconds;
+  std::atomic<bool> stop{false};
+  std::vector<std::thread> threads;
+  std::atomic<int> success_count{0};
+  std::atomic<int> error_count{0};
+
+  auto start_time = std::chrono::steady_clock::now();
+  auto end_time = start_time + std::chrono::seconds(duration_seconds);
+
+  for (int i = 0; i < num_threads; ++i) {
+    threads.emplace_back([&, i]() {
+      std::mt19937 rng(std::random_device{}());
+      std::uniform_int_distribution<int> sleep_dist(100, 500); // ms
+      std::uniform_int_distribution<int> len_dist(3, 12);
+      std::uniform_int_distribution<char> char_dist('a', 'z');
+      while (std::chrono::steady_clock::now() < end_time && !stop.load()) {
+        // Generate random string
+        int len = len_dist(rng);
+        std::string msg;
+        for (int j = 0; j < len; ++j) msg += char_dist(rng);
+        try {
+          std::string result = client_->SayHello(msg);
+          if (result == "Hello " + msg) {
+            ++success_count;
+          } else {
+            ++error_count;
+          }
+        } catch (const std::exception& e) {
+          ++error_count;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_dist(rng)));
+      }
+    });
+  }
+
+  // Wait for duration
+  std::this_thread::sleep_for(std::chrono::seconds(duration_seconds));
+  stop = true;
+  for (auto& t : threads) t.join();
+
+  std::cout << "Load test finished: " << success_count << " successes, " << error_count << " errors\n";
+  // Optionally, you can add assertions here
+  // EXPECT_GT(success_count, 0);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    LoadScenarios,
+    LoadTest,
+    ::testing::Values(
+        LoadTestParams{2, 5},   // 2 threads, 5 seconds
+        LoadTestParams{4, 5},   // 4 threads, 5 seconds
+        LoadTestParams{8, 10},   // 8 threads, 10 seconds
+        LoadTestParams{100, 30}   // 80 threads, 10 seconds
+    ));
 // Test server restart scenario
 TEST_F(IntegrationTest, ServerRestart) {
   // First request should work
