@@ -123,25 +123,34 @@ install_basic_deps() {
     fi
 }
 
-# Function to install Bazel
+# Function to install Bazel 8.0.0
 install_bazel() {
-    print_info "Installing Bazel..."
+    print_info "Installing Bazel 8.0.0..."
     
     # Install basic dependencies first
     install_basic_deps
     
+    # Check if we already have the correct version
+    if command -v bazel >/dev/null 2>&1; then
+        BAZEL_VERSION=$(bazel --version | cut -d' ' -f2)
+        if [ "$BAZEL_VERSION" = "8.0.0" ]; then
+            print_success "Bazel 8.0.0 is already installed"
+            return 0
+        else
+            print_info "Found Bazel $BAZEL_VERSION, upgrading to 8.0.0..."
+        fi
+    fi
+    
     # Detect OS
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        # Ubuntu/Debian
-        if command_exists apt-get; then
-            print_info "Installing Bazel on Ubuntu/Debian..."
-            curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg
-            sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
-            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-            sudo apt update
-            sudo apt install -y bazel
+        # Ubuntu/Debian - Download Bazel 8.0.0 directly
+        if command_exists wget; then
+            print_info "Downloading Bazel 8.0.0 for Linux..."
+            wget "https://github.com/bazelbuild/bazel/releases/download/8.0.0/bazel-8.0.0-linux-x86_64" -O bazel
+            chmod +x bazel
+            print_success "Bazel 8.0.0 installed successfully"
         else
-            print_error "apt-get not found. Please install Bazel manually."
+            print_error "wget not found. Please install wget or Bazel manually."
             return 1
         fi
     else

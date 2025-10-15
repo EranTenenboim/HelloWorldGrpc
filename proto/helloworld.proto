@@ -4,20 +4,94 @@ package helloworld;
 
 option cc_enable_arenas = true;
 
-// The greeting service definition.
-service Greeter {
-  // Sends a greeting
-  rpc SayHello(HelloRequest) returns (HelloReply);
+// The client registry service definition.
+service ClientRegistry {
+  // Register a client with the registry
+  rpc RegisterClient(ClientRegistration) returns (RegistrationResponse);
+  
+  // Get client information by ID
+  rpc GetClient(ClientLookup) returns (ClientInfo);
+  
+  // List all registered clients
+  rpc ListClients(ClientListRequest) returns (ClientList);
+  
+  // Unregister a client
+  rpc UnregisterClient(ClientUnregistration) returns (UnregistrationResponse);
 }
 
-// The request message containing the user's name.
-message HelloRequest {
-  string name = 1;
+// The direct client-to-client communication service
+service ClientCommunication {
+  // Send message to another client
+  rpc SendMessage(ClientMessage) returns (MessageResponse);
+  
+  // Receive messages from other clients
+  rpc ReceiveMessage(MessageRequest) returns (ClientMessage);
 }
 
-// The response message containing the greetings
-message HelloReply {
-  string message = 1;
+// Client registration message
+message ClientRegistration {
+  string client_id = 1;
+  string client_address = 2;
+  int32 client_port = 3;
+}
+
+// Registration response
+message RegistrationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Client lookup request
+message ClientLookup {
+  string client_id = 1;
+}
+
+// Client information
+message ClientInfo {
+  string client_id = 1;
+  string client_address = 2;
+  int32 client_port = 3;
+  bool online = 4;
+}
+
+// Client list request
+message ClientListRequest {
+  // Empty for now, could add filters later
+}
+
+// Client list response
+message ClientList {
+  repeated ClientInfo clients = 1;
+}
+
+// Client unregistration
+message ClientUnregistration {
+  string client_id = 1;
+}
+
+// Unregistration response
+message UnregistrationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Client-to-client message
+message ClientMessage {
+  string from_client_id = 1;
+  string to_client_id = 2;
+  string message_content = 3;
+  string timestamp = 4;
+}
+
+// Message response
+message MessageResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Message request (for receiving messages)
+message MessageRequest {
+  string client_id = 1;
 }
 
 

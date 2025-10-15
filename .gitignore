@@ -1,7 +1,14 @@
-# Bazel build artifacts
+# Bazel build artifacts and cache
 bazel-*
 .bazelrc
 .bazelversion
+.bazel-cache/
+.bazel-bin/
+.bazel-out/
+.bazel-testlogs/
+bazel-archive-keyring.gpg
+bazelisk
+bazel.list
 
 # Generated protobuf files
 proto/*.pb.cc
@@ -11,6 +18,7 @@ proto/*.grpc.pb.h
 
 # Build directories
 build/
+build_cmake/
 cmake-build-*/
 
 # IDE files
@@ -31,4 +39,49 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Bazel lock file
 MODULE.bazel.lock
+
+# Test artifacts
+test-results/
+coverage/
+
+# Executable files (except setup scripts)
+*.exe
+bazel
+bazel-7.0.0
+bazel-8.0.0
+
+# Cache directories
+.cache/
+cache/
+
+# Backup files
+*.bak
+*.backup
+
+# Additional build artifacts
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+
+# Python cache (if any Python tools are used)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node modules (if any Node.js tools are used)
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Coverage reports
+*.gcov
+*.gcno
+*.gcda

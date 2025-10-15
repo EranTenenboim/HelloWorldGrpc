@@ -10,247 +10,201 @@
 #include <memory>
 #include <string>
 #include <thread>
-#include <atomic>
 
 #include "proto/helloworld.grpc.pb.h"
 
 namespace helloworld {
 namespace {
 
-// Test fixture for server tests
-class GreeterServiceTest : public ::testing::Test {
+// Test fixture for ClientRegistryService
+class ClientRegistryServiceTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    service_ = std::make_unique<GreeterServiceImpl>();
+    service_ = std::make_unique<ClientRegistryServiceImpl>();
   }
 
-  std::unique_ptr<GreeterServiceImpl> service_;
+  std::unique_ptr<ClientRegistryServiceImpl> service_;
 };
 
-// Test successful SayHello service method
-TEST_F(GreeterServiceTest, SayHelloSuccess) {
-  // Create test request
-  helloworld::HelloRequest request;
-  request.set_name("World");
+// Test client registration
+TEST_F(ClientRegistryServiceTest, RegisterClient) {
+  helloworld::ClientRegistration request;
+  request.set_client_id("test_client");
+  request.set_client_address("localhost");
+  request.set_client_port(50052);
   
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
+  helloworld::RegistrationResponse reply;
   grpc::ServerContext context;
   
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
+  grpc::Status status = service_->RegisterClient(&context, &request, &reply);
   
-  // Verify the result
   EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello World");
+  EXPECT_TRUE(reply.success());
+  EXPECT_EQ(reply.message(), "Client registered successfully");
 }
 
-// Test SayHello with empty name
-TEST_F(GreeterServiceTest, SayHelloEmptyName) {
-  // Create test request with empty name
-  helloworld::HelloRequest request;
-  request.set_name("");
+// Test duplicate client registration
+TEST_F(ClientRegistryServiceTest, RegisterDuplicateClient) {
+  // Register client first time
+  helloworld::ClientRegistration request;
+  request.set_client_id("duplicate_client");
+  request.set_client_address("localhost");
+  request.set_client_port(50052);
   
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
+  helloworld::RegistrationResponse reply;
   grpc::ServerContext context;
   
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
+  grpc::Status status1 = service_->RegisterClient(&context, &request, &reply);
+  EXPECT_TRUE(status1.ok());
+  EXPECT_TRUE(reply.success());
   
-  // Verify the result
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello ");
+  // Try to register same client again
+  grpc::Status status2 = service_->RegisterClient(&context, &request, &reply);
+  EXPECT_TRUE(status2.ok());
+  EXPECT_FALSE(reply.success());
+  EXPECT_EQ(reply.message(), "Client ID already exists");
 }
 
-// Test SayHello with special characters
-TEST_F(GreeterServiceTest, SayHelloSpecialCharacters) {
-  // Create test request with special characters
-  helloworld::HelloRequest request;
-  request.set_name("Test@#$%");
+// Test get client
+TEST_F(ClientRegistryServiceTest, GetClient) {
+  // First register a client
+  helloworld::ClientRegistration reg_request;
+  reg_request.set_client_id("test_client");
+  reg_request.set_client_address("localhost");
+  reg_request.set_client_port(50052);
   
-  // Create response object
-  helloworld::HelloReply reply;
+  helloworld::RegistrationResponse reg_reply;
+  grpc::ServerContext reg_context;
+  service_->RegisterClient(&reg_context, &reg_request, &reg_reply);
   
-  // Create server context
+  // Now get the client
+  helloworld::ClientLookup lookup_request;
+  lookup_request.set_client_id("test_client");
+  
+  helloworld::ClientInfo client_info;
+  grpc::ServerContext lookup_context;
+  
+  grpc::Status status = service_->GetClient(&lookup_context, &lookup_request, &client_info);
+  
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(client_info.client_id(), "test_client");
+  EXPECT_EQ(client_info.client_address(), "localhost");
+  EXPECT_EQ(client_info.client_port(), 50052);
+  EXPECT_TRUE(client_info.online());
+}
+
+// Test get non-existent client
+TEST_F(ClientRegistryServiceTest, GetNonExistentClient) {
+  helloworld::ClientLookup request;
+  request.set_client_id("non_existent");
+  
+  helloworld::ClientInfo client_info;
   grpc::ServerContext context;
   
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
+  grpc::Status status = service_->GetClient(&context, &request, &client_info);
   
-  // Verify the result
   EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello Test@#$%");
+  EXPECT_EQ(client_info.client_id(), "non_existent");
+  EXPECT_FALSE(client_info.online());
 }
 
-// Test SayHello with long name
-TEST_F(GreeterServiceTest, SayHelloLongName) {
-  // Create test request with long name
-  std::string long_name(1000, 'A');
-  helloworld::HelloRequest request;
-  request.set_name(long_name);
+// Test list clients
+TEST_F(ClientRegistryServiceTest, ListClients) {
+  // Register multiple clients
+  std::vector<std::string> client_ids = {"client1", "client2", "client3"};
   
-  // Create response object
-  helloworld::HelloReply reply;
+  for (int i = 0; i < client_ids.size(); ++i) {
+    helloworld::ClientRegistration request;
+    request.set_client_id(client_ids[i]);
+    request.set_client_address("localhost");
+    request.set_client_port(50052 + i);
+    
+    helloworld::RegistrationResponse reply;
+    grpc::ServerContext context;
+    service_->RegisterClient(&context, &request, &reply);
+  }
   
-  // Create server context
+  // List all clients
+  helloworld::ClientListRequest list_request;
+  helloworld::ClientList client_list;
+  grpc::ServerContext list_context;
+  
+  grpc::Status status = service_->ListClients(&list_context, &list_request, &client_list);
+  
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(client_list.clients_size(), 3);
+  
+  // Check that all clients are in the list
+  std::set<std::string> found_clients;
+  for (const auto& client : client_list.clients()) {
+    found_clients.insert(client.client_id());
+  }
+  
+  for (const auto& client_id : client_ids) {
+    EXPECT_TRUE(found_clients.find(client_id) != found_clients.end());
+  }
+}
+
+// Test unregister client
+TEST_F(ClientRegistryServiceTest, UnregisterClient) {
+  // First register a client
+  helloworld::ClientRegistration reg_request;
+  reg_request.set_client_id("test_client");
+  reg_request.set_client_address("localhost");
+  reg_request.set_client_port(50052);
+  
+  helloworld::RegistrationResponse reg_reply;
+  grpc::ServerContext reg_context;
+  service_->RegisterClient(&reg_context, &reg_request, &reg_reply);
+  
+  // Now unregister the client
+  helloworld::ClientUnregistration unreg_request;
+  unreg_request.set_client_id("test_client");
+  
+  helloworld::UnregistrationResponse unreg_reply;
+  grpc::ServerContext unreg_context;
+  
+  grpc::Status status = service_->UnregisterClient(&unreg_context, &unreg_request, &unreg_reply);
+  
+  EXPECT_TRUE(status.ok());
+  EXPECT_TRUE(unreg_reply.success());
+  EXPECT_EQ(unreg_reply.message(), "Client unregistered successfully");
+}
+
+// Test unregister non-existent client
+TEST_F(ClientRegistryServiceTest, UnregisterNonExistentClient) {
+  helloworld::ClientUnregistration request;
+  request.set_client_id("non_existent");
+  
+  helloworld::UnregistrationResponse reply;
   grpc::ServerContext context;
   
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
+  grpc::Status status = service_->UnregisterClient(&context, &request, &reply);
   
-  // Verify the result
   EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello " + long_name);
+  EXPECT_FALSE(reply.success());
+  EXPECT_EQ(reply.message(), "Client ID not found");
 }
 
-// Test SayHello with Unicode characters
-TEST_F(GreeterServiceTest, SayHelloUnicode) {
-  // Create test request with Unicode characters
-  helloworld::HelloRequest request;
-  request.set_name("世界");
-  
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
-  grpc::ServerContext context;
-  
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
-  
-  // Verify the result
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello 世界");
-}
-
-// Test SayHello with whitespace
-TEST_F(GreeterServiceTest, SayHelloWhitespace) {
-  // Create test request with whitespace
-  helloworld::HelloRequest request;
-  request.set_name("  Test  ");
-  
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
-  grpc::ServerContext context;
-  
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
-  
-  // Verify the result
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello   Test  ");
-}
-
-// Test SayHello with newlines
-TEST_F(GreeterServiceTest, SayHelloNewlines) {
-  // Create test request with newlines
-  helloworld::HelloRequest request;
-  request.set_name("Test\nName");
-  
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
-  grpc::ServerContext context;
-  
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
-  
-  // Verify the result
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello Test\nName");
-}
-
-// Test null request handling
-TEST_F(GreeterServiceTest, DISABLED_SayHelloNullRequest) {
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
-  grpc::ServerContext context;
-  
-  // Call the service method with null request
-  grpc::Status status = service_->SayHello(&context, nullptr, &reply);
-  
-  // Verify the result - should handle gracefully
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello ");
-}
-
-// Test null reply handling
-TEST_F(GreeterServiceTest, DISABLED_SayHelloNullReply) {
-  // Create test request
-  helloworld::HelloRequest request;
-  request.set_name("World");
-  
-  // Create server context
-  grpc::ServerContext context;
-  
-  // Call the service method with null reply
-  grpc::Status status = service_->SayHello(&context, &request, nullptr);
-  
-  // Verify the result - should handle gracefully
-  EXPECT_TRUE(status.ok());
-}
-
-// Parameterized test for different names
-class GreeterServiceParameterizedTest : public GreeterServiceTest,
-                                        public ::testing::WithParamInterface<std::string> {};
-
-TEST_P(GreeterServiceParameterizedTest, SayHelloWithDifferentNames) {
-  std::string name = GetParam();
-  
-  // Create test request
-  helloworld::HelloRequest request;
-  request.set_name(name);
-  
-  // Create response object
-  helloworld::HelloReply reply;
-  
-  // Create server context
-  grpc::ServerContext context;
-  
-  // Call the service method
-  grpc::Status status = service_->SayHello(&context, &request, &reply);
-  
-  // Verify the result
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(reply.message(), "Hello " + name);
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    DifferentNames,
-    GreeterServiceParameterizedTest,
-    ::testing::Values("Alice", "Bob", "Charlie", "David", "Eve", "Frank", 
-                      "John Doe", "Jane Smith", "Test User"));
-
-// Test concurrent access to the service
-TEST_F(GreeterServiceTest, ConcurrentAccess) {
-  const int num_threads = 10;
-  const int requests_per_thread = 100;
+// Test concurrent client registrations
+TEST_F(ClientRegistryServiceTest, ConcurrentClientRegistrations) {
+  const int num_clients = 10;
   std::vector<std::thread> threads;
   std::atomic<int> success_count{0};
   
-  for (int i = 0; i < num_threads; ++i) {
-    threads.emplace_back([this, &success_count, requests_per_thread, i]() {
-      for (int j = 0; j < requests_per_thread; ++j) {
-        helloworld::HelloRequest request;
-        request.set_name("Thread" + std::to_string(i) + "_Request" + std::to_string(j));
-        
-        helloworld::HelloReply reply;
-        grpc::ServerContext context;
-        
-        grpc::Status status = service_->SayHello(&context, &request, &reply);
-        if (status.ok() && reply.message() == "Hello Thread" + std::to_string(i) + "_Request" + std::to_string(j)) {
-          success_count++;
-        }
+  for (int i = 0; i < num_clients; ++i) {
+    threads.emplace_back([this, i, &success_count]() {
+      helloworld::ClientRegistration request;
+      request.set_client_id("concurrent_client_" + std::to_string(i));
+      request.set_client_address("localhost");
+      request.set_client_port(50052 + i);
+      
+      helloworld::RegistrationResponse reply;
+      grpc::ServerContext context;
+      
+      grpc::Status status = service_->RegisterClient(&context, &request, &reply);
+      if (status.ok() && reply.success()) {
+        success_count++;
       }
     });
   }
@@ -260,8 +214,42 @@ TEST_F(GreeterServiceTest, ConcurrentAccess) {
     thread.join();
   }
   
-  // Verify all requests succeeded
-  EXPECT_EQ(success_count.load(), num_threads * requests_per_thread);
+  // Verify all registrations succeeded
+  EXPECT_EQ(success_count.load(), num_clients);
+}
+
+// Test empty client ID registration
+TEST_F(ClientRegistryServiceTest, RegisterClientWithEmptyId) {
+  helloworld::ClientRegistration request;
+  request.set_client_id("");  // Empty ID
+  request.set_client_address("localhost");
+  request.set_client_port(50052);
+  
+  helloworld::RegistrationResponse reply;
+  grpc::ServerContext context;
+  
+  grpc::Status status = service_->RegisterClient(&context, &request, &reply);
+  
+  EXPECT_TRUE(status.ok());
+  EXPECT_TRUE(reply.success());
+  EXPECT_EQ(reply.message(), "Client registered successfully");
+}
+
+// Test client registration with invalid port
+TEST_F(ClientRegistryServiceTest, RegisterClientWithInvalidPort) {
+  helloworld::ClientRegistration request;
+  request.set_client_id("invalid_port_client");
+  request.set_client_address("localhost");
+  request.set_client_port(-1);  // Invalid port
+  
+  helloworld::RegistrationResponse reply;
+  grpc::ServerContext context;
+  
+  grpc::Status status = service_->RegisterClient(&context, &request, &reply);
+  
+  EXPECT_TRUE(status.ok());
+  EXPECT_TRUE(reply.success());
+  EXPECT_EQ(reply.message(), "Client registered successfully");
 }
 
 }  // namespace
