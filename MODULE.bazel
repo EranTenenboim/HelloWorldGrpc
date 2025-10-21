@@ -4,7 +4,7 @@ module(
 )
 
 # Core Bazel dependencies
-bazel_dep(name = "rules_proto", version = "5.3.0-21.7")
+bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_cc", version = "0.1.4")
 
 # Protocol Buffers and gRPC
@@ -12,4 +12,4 @@ bazel_dep(name = "protobuf", version = "32.0")
 bazel_dep(name = "grpc", version = "1.74.0")
 
 # Google Test
-bazel_dep(name = "googletest", version = "1.14.0")
+bazel_dep(name = "googletest", version = "1.17.0")
