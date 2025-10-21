@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <chrono>
 
 #include "proto/helloworld.grpc.pb.h"
 
@@ -24,9 +25,12 @@ class ClientCommunicationServiceImpl final : public helloworld::ClientCommunicat
                              const helloworld::MessageRequest* request,
                              helloworld::ClientMessage* reply) override;
 
+  // Get current message queue (for polling)
+  std::vector<helloworld::ClientMessage> GetMessageQueue() const;
+
  private:
   std::vector<helloworld::ClientMessage> message_queue_;
-  std::mutex message_mutex_;
+  mutable std::mutex message_mutex_;
 };
 
 // Client registry client
