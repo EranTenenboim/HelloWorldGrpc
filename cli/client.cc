@@ -17,17 +17,12 @@ grpc::Status ClientCommunicationServiceImpl::SendMessage(grpc::ServerContext* co
   
   // Store the message in the queue
   message_queue_.push_back(*request);
-  
-  std::cout << "\n*** IMMEDIATE MESSAGE RECEIVED ***" << std::endl;
-  std::cout << "From: " << request->from_client_id() << std::endl;
-  std::cout << "To: " << request->to_client_id() << std::endl;
-  std::cout << "Message: " << request->message_content() << std::endl;
-  std::cout << "Timestamp: " << request->timestamp() << std::endl;
-  std::cout << "**********************************" << std::endl;
+ 
+  std::cout << "["<< request->timestamp() << "] " << request->from_client_id() << ": " << request->message_content() << std::endl;
   std::cout.flush();
   
   reply->set_success(true);
-  reply->set_message("Message received");
+  
   
   return grpc::Status::OK;
 }

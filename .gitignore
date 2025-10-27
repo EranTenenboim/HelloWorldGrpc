@@ -85,3 +85,8 @@ node_modules/
 *.gcov
 *.gcno
 *.gcda
+
+# Clip cache specific files
+clip_cache/
+*.clip_cache
+.cache/clip/
