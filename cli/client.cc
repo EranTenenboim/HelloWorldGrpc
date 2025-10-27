@@ -17,12 +17,12 @@ grpc::Status ClientCommunicationServiceImpl::SendMessage(grpc::ServerContext* co
   
   // Store the message in the queue
   message_queue_.push_back(*request);
-  
-  std::cout << "Received message from " << request->from_client_id() 
-            << ": " << request->message_content() << std::endl;
+ 
+  std::cout << "["<< request->timestamp() << "] " << request->from_client_id() << ": " << request->message_content() << std::endl;
+  std::cout.flush();
   
   reply->set_success(true);
-  reply->set_message("Message received");
+  
   
   return grpc::Status::OK;
 }
@@ -46,6 +46,11 @@ grpc::Status ClientCommunicationServiceImpl::ReceiveMessage(grpc::ServerContext*
   message_queue_.erase(message_queue_.begin());
   
   return grpc::Status::OK;
+}
+
+std::vector<helloworld::ClientMessage> ClientCommunicationServiceImpl::GetMessageQueue() const {
+  std::lock_guard<std::mutex> lock(message_mutex_);
+  return message_queue_;
 }
 
 // Client registry client implementation
@@ -217,6 +222,9 @@ bool Client::Start() {
     communication_server_->Wait();
   });
   
+  // Message polling is not needed since messages are printed immediately
+  // when received via gRPC SendMessage call
+  
   running_ = true;
   std::cout << "Client started successfully" << std::endl;
   
@@ -271,9 +279,15 @@ void Client::Stop() {
     server_thread_.join();
   }
   
+  // No message polling thread to join
+  
   running_ = false;
   std::cout << "Client stopped" << std::endl;
 }
+
+// PollMessages method removed - messages are printed immediately when received
+
+// GetCommunicationService method removed - not needed
 
 void RunClientCommunicationServer(const std::string& client_address, int32_t client_port) {
   const std::string full_address = client_address + ":" + std::to_string(client_port);

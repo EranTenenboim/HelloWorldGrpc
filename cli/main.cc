@@ -108,7 +108,7 @@ int main(const int argc, const char* const argv[]) {
     // Interactive command loop
     std::string input;
     while (true) {
-      std::cout << client_id << "> ";
+      
       std::getline(std::cin, input);
       
       if (input.empty()) {
